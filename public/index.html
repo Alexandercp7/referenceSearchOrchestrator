@@ -151,6 +151,23 @@
     }
     .card-actions a:hover { text-decoration: underline; }
 
+    /* ── ALERTS SUBSECTIONS ── */
+    .alerts-group-title {
+      font-size: .75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--muted); margin: 1.25rem 0 .5rem;
+    }
+    .alerts-group-title:first-child { margin-top: 0; }
+    .alert-status {
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-size: .72rem; font-weight: 600; padding: .15rem .5rem;
+      border-radius: 99px; white-space: nowrap;
+    }
+    .status-monitoring { background: #dcfce7; color: #15803d; }
+    .status-triggered  { background: #fff7ed; color: #c2410c; }
+    .triggered-at {
+      font-size: .75rem; color: var(--muted); margin-top: .25rem;
+    }
+
     /* ── WATCHLIST / ALERTS ── */
     .section-header {
       display: flex; justify-content: space-between; align-items: center;
@@ -473,6 +490,7 @@ document.getElementById('login-submit').addEventListener('click', async () => {
     updateAuthUI();
     closeModal('auth-modal');
     toast('Bienvenido');
+    registerPush();
   } catch (e) { errEl.textContent = e.message; }
 });
 
@@ -491,6 +509,7 @@ document.getElementById('reg-submit').addEventListener('click', async () => {
     updateAuthUI();
     closeModal('auth-modal');
     toast('Cuenta creada');
+    registerPush();
   } catch (e) { errEl.textContent = e.message; }
 });
 
@@ -699,28 +718,78 @@ function conditionLabel(condition) {
   }
 }
 
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1)  return 'hace un momento';
+  if (mins < 60) return `hace ${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)  return `hace ${hrs} h`;
+  const days = Math.floor(hrs / 24);
+  return `hace ${days} día${days > 1 ? 's' : ''}`;
+}
+
+function alertCard(alert) {
+  const triggered = alert.lastTriggeredAt != null;
+  const badge = triggered
+    ? `<span class="alert-status status-triggered">&#9679; Disparada</span>`
+    : `<span class="alert-status status-monitoring">&#9679; Monitoreando</span>`;
+  const triggeredLine = triggered
+    ? `<div class="triggered-at">Última vez: ${timeAgo(alert.lastTriggeredAt)} &middot; ${new Date(alert.lastTriggeredAt).toLocaleString('es-MX')}</div>`
+    : '';
+  const el = document.createElement('div');
+  el.className = 'item-card';
+  el.innerHTML = `
+    <div class="item-info">
+      <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.25rem">
+        <span class="item-title">${conditionLabel(alert.condition)}</span>
+        ${badge}
+      </div>
+      <div class="item-sub"><a href="${alert.productUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-size:.75rem">${alert.productUrl}</a></div>
+      ${triggeredLine}
+    </div>
+    <div>
+      <button class="btn-danger" onclick="removeAlert('${alert.id}',this)">Eliminar</button>
+    </div>`;
+  return el;
+}
+
 function renderAlerts(alerts, container) {
   if (!alerts || alerts.length === 0) {
-    container.innerHTML = `<div class="empty-state">Sin alertas activas</div>`;
+    container.innerHTML = `<div class="empty-state">Sin alertas configuradas</div>`;
     return;
   }
-  const list = document.createElement('div');
-  list.className = 'item-list';
-  alerts.forEach(alert => {
-    const el = document.createElement('div');
-    el.className = 'item-card';
-    el.innerHTML = `
-      <div class="item-info">
-        <div class="item-title">${conditionLabel(alert.condition)}</div>
-        <div class="item-sub"><a href="${alert.productUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-size:.75rem">${alert.productUrl}</a></div>
-      </div>
-      <div>
-        <button class="btn-danger" onclick="removeAlert('${alert.id}',this)">Eliminar</button>
-      </div>`;
-    list.appendChild(el);
-  });
+
+  const monitoring = alerts.filter(a => a.lastTriggeredAt == null);
+  const triggered  = alerts.filter(a => a.lastTriggeredAt != null)
+                           .sort((a, b) => new Date(b.lastTriggeredAt) - new Date(a.lastTriggeredAt));
+
+  const wrap = document.createElement('div');
+
+  if (triggered.length > 0) {
+    const title = document.createElement('div');
+    title.className = 'alerts-group-title';
+    title.textContent = `Disparadas (${triggered.length})`;
+    wrap.appendChild(title);
+    const list = document.createElement('div');
+    list.className = 'item-list';
+    triggered.forEach(a => list.appendChild(alertCard(a)));
+    wrap.appendChild(list);
+  }
+
+  if (monitoring.length > 0) {
+    const title = document.createElement('div');
+    title.className = 'alerts-group-title';
+    title.textContent = `Monitoreando (${monitoring.length})`;
+    wrap.appendChild(title);
+    const list = document.createElement('div');
+    list.className = 'item-list';
+    monitoring.forEach(a => list.appendChild(alertCard(a)));
+    wrap.appendChild(list);
+  }
+
   container.innerHTML = '';
-  container.appendChild(list);
+  container.appendChild(wrap);
 }
 
 async function removeAlert(id, btn) {
@@ -788,8 +857,38 @@ document.getElementById('add-alert-form').addEventListener('submit', async e => 
   } catch (e) { errEl.textContent = e.message; }
 });
 
+// ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────
+async function registerPush() {
+  if (!accessToken) return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
+
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+
+    const { publicKey } = await api('GET', '/push/vapid-public-key');
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+    await authApi('POST', '/push/subscribe', sub.toJSON());
+  } catch (e) {
+    console.warn('[push] registro fallido:', e);
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
 // ── INIT ───────────────────────────────────────────────────────────────────
 updateAuthUI();
+registerPush();
 </script>
 </body>
 </html>

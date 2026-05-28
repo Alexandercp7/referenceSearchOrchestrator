@@ -14,7 +14,7 @@ class FakeHistory implements PriceHistoryRepository {
 }
 
 const snap = (amount: number) =>
-  new PriceSnapshot('id', 'https://example.com', 'amazon', new Money(amount, 'MXN'), new Date());
+  new PriceSnapshot('id', 'https://example.com', 'amazon', '', new Money(amount, 'MXN'), new Date());
 
 describe('PriceBelowEvaluator', () => {
   let evaluator: PriceBelowEvaluator;

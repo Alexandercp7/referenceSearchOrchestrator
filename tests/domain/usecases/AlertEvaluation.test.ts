@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Alert } from '../../../src/domain/entities/Alert';
 import { PriceSnapshot } from '../../../src/domain/entities/PriceSnapshot';
 import { User } from '../../../src/domain/entities/User';
-import { NotificationGateway } from '../../../src/domain/interfaces/gateways/NotificationGateway';
+import { NotificationGateway, TriggeredAlert } from '../../../src/domain/interfaces/gateways/NotificationGateway';
 import { AlertRepository } from '../../../src/domain/interfaces/repositories/AlertRepository';
 import { PriceHistoryRepository } from '../../../src/domain/interfaces/repositories/PriceHistoryRepository';
 import { UserRepository } from '../../../src/domain/interfaces/repositories/UserRepository';
@@ -16,7 +16,7 @@ import { asPasswordHash } from '../../../src/domain/valueObjects/PasswordHash';
 
 const MXN = (n: number) => new Money(n, 'MXN');
 const snap = (amount: number) =>
-  new PriceSnapshot('s1', 'https://example.com', 'amazon', MXN(amount), new Date());
+  new PriceSnapshot('s1', 'https://example.com', 'amazon', 'Monitor', MXN(amount), new Date());
 const cond = priceBelow(MXN(600));
 
 class FakeAlertRepo implements AlertRepository {
@@ -47,9 +47,9 @@ class FakeUsers implements UserRepository {
 }
 
 class FakeNotifier implements NotificationGateway {
-  readonly calls: Array<{ user: User; alert: Alert; snapshot: PriceSnapshot }> = [];
-  async notify(user: User, alert: Alert, snapshot: PriceSnapshot): Promise<void> {
-    this.calls.push({ user, alert, snapshot });
+  readonly calls: Array<{ user: User; items: TriggeredAlert[] }> = [];
+  async notify(user: User, items: TriggeredAlert[]): Promise<void> {
+    this.calls.push({ user, items });
   }
 }
 
@@ -63,13 +63,8 @@ class NeverMatch implements AlertConditionEvaluator {
   async matches(): Promise<boolean> { return false; }
 }
 
-function makeUser(): User {
-  return new User(
-    'user-1',
-    new Email('user@example.com'),
-    asPasswordHash('$2b$10$aaaaaaaaaaaaaaaaaaaa'),
-    new Date(),
-  );
+function makeUser(id = 'user-1', email = 'user@example.com'): User {
+  return new User(id, new Email(email), asPasswordHash('$2b$10$aaaaaaaaaaaaaaaaaaaa'), new Date());
 }
 
 const alert = new Alert('a1', 'user-1', 'https://example.com', cond, true, null);
@@ -94,7 +89,44 @@ describe('AlertEvaluation', () => {
     );
     await useCase.evaluate();
     expect(notifier.calls).toHaveLength(1);
+    expect(notifier.calls[0]!.items).toHaveLength(1);
     expect(alertRepo.saved[0]?.lastTriggeredAt).not.toBeNull();
+  });
+
+  it('batches multiple alerts for the same user into one notify call', async () => {
+    const alert2 = new Alert('a2', 'user-1', 'https://example.com/2', cond, true, null);
+    const useCase = new AlertEvaluation(
+      new FakeAlertRepo([alert, alert2]),
+      new FakeHistory(snap(400)),
+      new FakeUsers(makeUser()),
+      notifier,
+      evaluators(new AlwaysMatch()),
+    );
+    await useCase.evaluate();
+    expect(notifier.calls).toHaveLength(1);
+    expect(notifier.calls[0]!.items).toHaveLength(2);
+  });
+
+  it('sends separate notify calls for different users', async () => {
+    const alert2 = new Alert('a2', 'user-2', 'https://example.com/2', cond, true, null);
+    const multiUsers: UserRepository = {
+      async findById(id) {
+        if (id === 'user-1') return makeUser('user-1', 'u1@example.com');
+        if (id === 'user-2') return makeUser('user-2', 'u2@example.com');
+        return null;
+      },
+      async findByEmail() { return null; },
+      async save() {},
+    };
+    const useCase = new AlertEvaluation(
+      new FakeAlertRepo([alert, alert2]),
+      new FakeHistory(snap(400)),
+      multiUsers,
+      notifier,
+      evaluators(new AlwaysMatch()),
+    );
+    await useCase.evaluate();
+    expect(notifier.calls).toHaveLength(2);
   });
 
   it('does not notify when condition does not match', async () => {
@@ -133,8 +165,8 @@ describe('AlertEvaluation', () => {
     expect(notifier.calls).toHaveLength(0);
   });
 
-  it('continues evaluating other alerts when one throws', async () => {
-    const alert2 = new Alert('a2', 'user-1', 'https://example.com/2', cond, true, null);
+  it('continues notifying other users when one notify call throws', async () => {
+    const alert2 = new Alert('a2', 'user-2', 'https://example.com/2', cond, true, null);
     let callCount = 0;
     const faultyNotifier: NotificationGateway = {
       async notify() {
@@ -142,10 +174,19 @@ describe('AlertEvaluation', () => {
         if (callCount === 1) throw new Error('notification failed');
       },
     };
+    const multiUsers: UserRepository = {
+      async findById(id) {
+        if (id === 'user-1') return makeUser('user-1', 'u1@example.com');
+        if (id === 'user-2') return makeUser('user-2', 'u2@example.com');
+        return null;
+      },
+      async findByEmail() { return null; },
+      async save() {},
+    };
     const useCase = new AlertEvaluation(
       new FakeAlertRepo([alert, alert2]),
       new FakeHistory(snap(400)),
-      new FakeUsers(makeUser()),
+      multiUsers,
       faultyNotifier,
       evaluators(new AlwaysMatch()),
     );

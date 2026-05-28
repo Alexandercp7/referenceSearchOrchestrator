@@ -28,4 +28,17 @@ export const config = {
   bcryptRounds: num('BCRYPT_ROUNDS', isProd ? 12 : 10),
   schedulerIntervalMs: num('SCHEDULER_INTERVAL_MS', 60_000),
   cacheTtlSeconds: num('CACHE_TTL_SECONDS', 300),
+  smtp: {
+    host: str('SMTP_HOST', ''),
+    port: num('SMTP_PORT', 587),
+    secure: (process.env['SMTP_SECURE'] ?? 'false') === 'true',
+    user: str('SMTP_USER', ''),
+    pass: str('SMTP_PASS', ''),
+    from: str('SMTP_FROM', ''),
+  },
+  vapid: {
+    publicKey: str('VAPID_PUBLIC_KEY', ''),
+    privateKey: str('VAPID_PRIVATE_KEY', ''),
+    subject: str('VAPID_SUBJECT', ''),
+  },
 } as const;

@@ -14,7 +14,7 @@ export class DateRange {
     this.to = to;
   }
 
-  static lastDays(days: number, to: Date): DateRange {
+  static lastDays(days: number, to: Date = new Date()): DateRange {
     const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
     return new DateRange(from, to);
   }

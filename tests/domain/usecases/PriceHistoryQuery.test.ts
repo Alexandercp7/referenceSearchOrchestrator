@@ -17,7 +17,7 @@ describe('PriceHistoryQuery', () => {
   const range = new DateRange(new Date('2024-01-01'), new Date('2024-01-31'));
   const scrapedAt = new Date('2024-01-15');
   const price = new Money(500, 'MXN');
-  const snap = new PriceSnapshot('s1', 'https://example.com', 'amazon', price, scrapedAt);
+  const snap = new PriceSnapshot('s1', 'https://example.com', 'amazon', '', price, scrapedAt);
 
   it('maps snapshots to PricePoints with timestamp and price', async () => {
     const useCase = new PriceHistoryQuery(new FakeHistory([snap]));
@@ -35,8 +35,8 @@ describe('PriceHistoryQuery', () => {
   });
 
   it('preserves the order of snapshots', async () => {
-    const s1 = new PriceSnapshot('s1', 'https://example.com', 'amazon', new Money(500, 'MXN'), new Date('2024-01-10'));
-    const s2 = new PriceSnapshot('s2', 'https://example.com', 'amazon', new Money(480, 'MXN'), new Date('2024-01-20'));
+    const s1 = new PriceSnapshot('s1', 'https://example.com', 'amazon', '', new Money(500, 'MXN'), new Date('2024-01-10'));
+    const s2 = new PriceSnapshot('s2', 'https://example.com', 'amazon', '', new Money(480, 'MXN'), new Date('2024-01-20'));
     const useCase = new PriceHistoryQuery(new FakeHistory([s1, s2]));
     const points = await useCase.query({ productUrl: 'https://example.com', range });
 

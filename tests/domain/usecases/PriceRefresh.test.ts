@@ -8,8 +8,14 @@ import { Normalizer } from '../../../src/domain/interfaces/services/Normalizer';
 import { StoreProductLookup } from '../../../src/domain/interfaces/stores/StoreProductLookup';
 import { PriceRefresh } from '../../../src/domain/usecases/PriceRefresh';
 import { RawProduct } from '../../../src/domain/dtos/search/RawProduct';
+import { IdGenerator } from '../../../src/domain/interfaces/gateways/IdGenerator';
 import { DateRange } from '../../../src/domain/valueObjects/DateRange';
 import { Money } from '../../../src/domain/valueObjects/Money';
+
+class FakeIds implements IdGenerator {
+  private n = 0;
+  generate(): string { return `id-${++this.n}`; }
+}
 
 class FakeWatchlist implements WatchlistRepository {
   constructor(private items: WatchlistItem[]) {}
@@ -67,6 +73,7 @@ describe('PriceRefresh', () => {
       history,
       new Map([['amazon', new FakeStore(rawProduct)]]),
       new FakeNormalizer(),
+      new FakeIds(),
     );
     await useCase.refresh();
     expect(history.saved).toHaveLength(1);
@@ -79,6 +86,7 @@ describe('PriceRefresh', () => {
       history,
       new Map(),
       new FakeNormalizer(),
+      new FakeIds(),
     );
     await useCase.refresh();
     expect(history.saved).toHaveLength(0);
@@ -90,6 +98,7 @@ describe('PriceRefresh', () => {
       history,
       new Map([['amazon', new FakeStore(null)]]),
       new FakeNormalizer(),
+      new FakeIds(),
     );
     await useCase.refresh();
     expect(history.saved).toHaveLength(0);
@@ -111,6 +120,7 @@ describe('PriceRefresh', () => {
       history,
       new Map([['amazon', faultyStore]]),
       new FakeNormalizer(),
+      new FakeIds(),
     );
     await expect(useCase.refresh()).resolves.not.toThrow();
     expect(history.saved).toHaveLength(1);

@@ -50,13 +50,14 @@ export class WatchlistAddition {
       this.ids.generate(),
       request.productUrl,
       request.store,
+      product.title,
       product.price,
       now,
     );
     try {
       await this.history.saveSnapshot(snapshot);
     } catch (err) {
-      await this.watchlist.remove(item.id);
+      await this.watchlist.remove(item.id).catch(() => {});
       throw err;
     }
 

@@ -11,59 +11,59 @@ const CHROME_EXECUTABLE =
   process.env['CHROME_PATH'] ??
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 
-let sharedBrowser: Browser | null = null;
-
-async function getBrowser(): Promise<Browser> {
-  if (!sharedBrowser || !sharedBrowser.connected) {
-    sharedBrowser = await puppeteer.launch({
-      executablePath: CHROME_EXECUTABLE,
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-blink-features=AutomationControlled',
-      ],
-    });
-    sharedBrowser.on('disconnected', () => { sharedBrowser = null; });
-  }
-  return sharedBrowser;
-}
-
-async function getRenderedHtml(url: string, waitForSelector: string): Promise<string> {
-  let browser: Browser;
-  try {
-    browser = await getBrowser();
-  } catch {
-    return '';
-  }
-  const page = await browser.newPage().catch(() => null);
-  if (!page) return '';
-  try {
-    await page.setViewport({ width: 1920, height: 1080 });
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    );
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {});
-    await page.waitForSelector(waitForSelector, { timeout: 25_000 }).catch(() => {});
-    return await page.content().catch(() => '');
-  } finally {
-    await page.close().catch(() => {});
-  }
-}
-
 export class MercadoLibreStore implements Store {
   readonly name = 'mercadolibre';
 
+  private browser: Browser | null = null;
+
   async search(query: string): Promise<RawProduct[]> {
     const url = SEARCH_URL + query.replace(/\s+/g, '-');
-    const html = await getRenderedHtml(url, 'div[class*="poly-card"]');
+    const html = await this.getRenderedHtml(url, 'div[class*="poly-card"]');
     return this.parseSearchResults(html);
   }
 
   async fetchOne(url: string): Promise<RawProduct | null> {
-    const html = await getRenderedHtml(url, 'h1.ui-pdp-title');
+    const html = await this.getRenderedHtml(url, 'h1.ui-pdp-title');
     return this.parseProductPage(html, url);
+  }
+
+  private async getBrowser(): Promise<Browser> {
+    if (!this.browser || !this.browser.connected) {
+      this.browser = await puppeteer.launch({
+        executablePath: CHROME_EXECUTABLE,
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-blink-features=AutomationControlled',
+        ],
+      });
+      this.browser.on('disconnected', () => { this.browser = null; });
+    }
+    return this.browser;
+  }
+
+  private async getRenderedHtml(url: string, waitForSelector: string): Promise<string> {
+    let browser: Browser;
+    try {
+      browser = await this.getBrowser();
+    } catch {
+      return '';
+    }
+    const page = await browser.newPage().catch(() => null);
+    if (!page) return '';
+    try {
+      await page.setViewport({ width: 1920, height: 1080 });
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      );
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {});
+      await page.waitForSelector(waitForSelector, { timeout: 25_000 }).catch(() => {});
+      return await page.content().catch(() => '');
+    } finally {
+      await page.close().catch(() => {});
+    }
   }
 
   private parseSearchResults(html: string): RawProduct[] {

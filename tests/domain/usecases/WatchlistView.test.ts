@@ -24,6 +24,13 @@ class FakeHistory implements PriceHistoryRepository {
   async saveSnapshot(): Promise<void> {}
   async getHistory(): Promise<PriceSnapshot[]> { return []; }
   async getLatest(): Promise<PriceSnapshot | null> { return this.latest; }
+  async getLatestBatch(urls: string[]): Promise<Map<string, PriceSnapshot>> {
+    const result = new Map<string, PriceSnapshot>();
+    if (this.latest) {
+      for (const url of urls) result.set(url, this.latest);
+    }
+    return result;
+  }
   async getMin(_url: string, _range: DateRange): Promise<Money | null> { return null; }
 }
 
@@ -33,7 +40,7 @@ describe('WatchlistView', () => {
 
   it('returns views with currentPrice when history exists', async () => {
     const price = new Money(999, 'MXN');
-    const snap = new PriceSnapshot('s1', 'https://example.com', 'amazon', price, new Date());
+    const snap = new PriceSnapshot('s1', 'https://example.com', 'amazon', '', price, new Date());
     const useCase = new WatchlistView(new FakeWatchlist([item]), new FakeHistory(snap));
 
     const views = await useCase.list('user-1');

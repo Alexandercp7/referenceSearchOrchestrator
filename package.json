@@ -18,7 +18,8 @@
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.22.4",
     "nodemailer": "^6.10.1",
-    "puppeteer-core": "^25.1.0"
+    "puppeteer-core": "^25.1.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -26,6 +27,7 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.11.0",
     "@types/nodemailer": "^6.4.23",
+    "@types/web-push": "^3.6.4",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"

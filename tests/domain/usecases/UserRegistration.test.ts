@@ -6,9 +6,15 @@ import {
   TokenPair,
   TokenPayload,
 } from '../../../src/domain/interfaces/gateways/AuthGateway';
+import { IdGenerator } from '../../../src/domain/interfaces/gateways/IdGenerator';
 import { UserRepository } from '../../../src/domain/interfaces/repositories/UserRepository';
 import { UserRegistration } from '../../../src/domain/usecases/UserRegistration';
 import { Email } from '../../../src/domain/valueObjects/Email';
+
+class FakeIds implements IdGenerator {
+  private n = 0;
+  generate(): string { return `id-${++this.n}`; }
+}
 
 class FakeUserRepo implements UserRepository {
   private byEmail = new Map<string, User>();
@@ -50,11 +56,12 @@ describe('UserRegistration', () => {
   beforeEach(() => {
     users = new FakeUserRepo();
     auth = new FakeAuth();
-    registration = new UserRegistration(users, auth, auth);
+    registration = new UserRegistration(users, auth, auth, new FakeIds());
   });
 
   it('registers a new user and returns tokens', async () => {
     const response = await registration.register({
+      name: 'FooUser',
       email: 'foo@example.com',
       password: 'secret123',
     });
@@ -64,9 +71,9 @@ describe('UserRegistration', () => {
   });
 
   it('fails if the email is already registered', async () => {
-    await registration.register({ email: 'foo@example.com', password: 'secret123' });
+    await registration.register({ name: 'FooUser', email: 'foo@example.com', password: 'secret123' });
     await expect(
-      registration.register({ email: 'foo@example.com', password: 'other' }),
+      registration.register({ name: 'FooUser', email: 'foo@example.com', password: 'other' }),
     ).rejects.toBeInstanceOf(UserAlreadyExists);
   });
 });

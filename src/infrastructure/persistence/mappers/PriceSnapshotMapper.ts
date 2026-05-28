@@ -5,6 +5,7 @@ export interface PriceSnapshotRow {
   id: string;
   product_url: string;
   store: string;
+  title: string;
   amount: string;
   currency: string;
   scraped_at: Date;
@@ -16,6 +17,7 @@ export class PriceSnapshotMapper {
       row.id,
       row.product_url,
       row.store,
+      row.title,
       new Money(row.amount, row.currency),
       row.scraped_at,
     );
@@ -26,6 +28,7 @@ export class PriceSnapshotMapper {
       id: snapshot.id,
       product_url: snapshot.productUrl,
       store: snapshot.store,
+      title: snapshot.title,
       amount: snapshot.price.amount.toString(),
       currency: snapshot.price.currency,
       scraped_at: snapshot.scrapedAt,

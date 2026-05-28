@@ -2,8 +2,14 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Alert } from '../../../src/domain/entities/Alert';
 import { AlertRepository } from '../../../src/domain/interfaces/repositories/AlertRepository';
 import { AlertCreation } from '../../../src/domain/usecases/AlertCreation';
+import { IdGenerator } from '../../../src/domain/interfaces/gateways/IdGenerator';
 import { priceBelow } from '../../../src/domain/valueObjects/AlertCondition';
 import { Money } from '../../../src/domain/valueObjects/Money';
+
+class FakeIds implements IdGenerator {
+  private n = 0;
+  generate(): string { return `id-${++this.n}`; }
+}
 
 class FakeAlertRepo implements AlertRepository {
   readonly saved: Alert[] = [];
@@ -26,7 +32,7 @@ describe('AlertCreation', () => {
 
   beforeEach(() => {
     repo = new FakeAlertRepo();
-    useCase = new AlertCreation(repo);
+    useCase = new AlertCreation(repo, new FakeIds());
   });
 
   it('creates an alert that is active with no lastTriggeredAt', async () => {

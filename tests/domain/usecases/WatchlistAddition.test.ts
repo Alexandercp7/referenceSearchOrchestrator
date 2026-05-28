@@ -10,8 +10,14 @@ import { Normalizer } from '../../../src/domain/interfaces/services/Normalizer';
 import { StoreProductLookup } from '../../../src/domain/interfaces/stores/StoreProductLookup';
 import { WatchlistAddition } from '../../../src/domain/usecases/WatchlistAddition';
 import { RawProduct } from '../../../src/domain/dtos/search/RawProduct';
+import { IdGenerator } from '../../../src/domain/interfaces/gateways/IdGenerator';
 import { DateRange } from '../../../src/domain/valueObjects/DateRange';
 import { Money } from '../../../src/domain/valueObjects/Money';
+
+class FakeIds implements IdGenerator {
+  private n = 0;
+  generate(): string { return `id-${++this.n}`; }
+}
 
 class FakeWatchlist implements WatchlistRepository {
   private items = new Map<string, WatchlistItem>();
@@ -80,6 +86,7 @@ describe('WatchlistAddition', () => {
       history,
       new Map([['amazon', new FakeStore(rawProduct)]]),
       new FakeNormalizer(),
+      new FakeIds(),
     );
   });
 
@@ -122,6 +129,7 @@ describe('WatchlistAddition', () => {
       history,
       new Map([['amazon', new FakeStore(null)]]),
       new FakeNormalizer(),
+      new FakeIds(),
     );
     await expect(
       emptyUseCase.add({ userId: 'u1', productUrl: 'https://example.com/monitor', store: 'amazon' }),

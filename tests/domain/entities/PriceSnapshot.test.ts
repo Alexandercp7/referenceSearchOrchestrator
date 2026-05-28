@@ -8,14 +8,15 @@ describe('PriceSnapshot', () => {
   const now = new Date('2024-06-01');
 
   it('builds with valid properties', () => {
-    const snap = new PriceSnapshot('s1', 'https://example.com', 'amazon', price, now);
+    const snap = new PriceSnapshot('s1', 'https://example.com', 'amazon', 'Monitor', price, now);
     expect(snap.id).toBe('s1');
     expect(snap.store).toBe('amazon');
+    expect(snap.title).toBe('Monitor');
     expect(snap.price).toBe(price);
     expect(snap.scrapedAt).toBe(now);
   });
 
   it('rejects empty productUrl', () => {
-    expect(() => new PriceSnapshot('s1', '', 'amazon', price, now)).toThrow(InvalidProductUrl);
+    expect(() => new PriceSnapshot('s1', '', 'amazon', 'Monitor', price, now)).toThrow(InvalidProductUrl);
   });
 });

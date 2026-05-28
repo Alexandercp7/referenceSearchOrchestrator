@@ -10,19 +10,17 @@ export class WatchlistView {
 
   async list(userId: string): Promise<WatchlistItemView[]> {
     const items = await this.watchlist.findByUser(userId);
+    if (items.length === 0) return [];
 
-    return Promise.all(
-      items.map(async (item) => {
-        const latest = await this.history.getLatest(item.productUrl);
-        return {
-          id: item.id,
-          productUrl: item.productUrl,
-          store: item.store,
-          title: item.title,
-          addedAt: item.addedAt,
-          currentPrice: latest ? latest.price : null,
-        };
-      }),
-    );
+    const latestByUrl = await this.history.getLatestBatch(items.map((i) => i.productUrl));
+
+    return items.map((item) => ({
+      id: item.id,
+      productUrl: item.productUrl,
+      store: item.store,
+      title: item.title,
+      addedAt: item.addedAt,
+      currentPrice: latestByUrl.get(item.productUrl)?.price ?? null,
+    }));
   }
 }

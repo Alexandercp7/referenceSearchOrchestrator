@@ -32,6 +32,7 @@ export class PriceRefresh {
       this.ids.generate(),
       item.productUrl,
       item.store,
+      product.title,
       product.price,
       new Date(),
     );
