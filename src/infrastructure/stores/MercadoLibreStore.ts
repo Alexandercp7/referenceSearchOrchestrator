@@ -25,13 +25,20 @@ async function getBrowser(): Promise<Browser> {
         '--disable-blink-features=AutomationControlled',
       ],
     });
+    sharedBrowser.on('disconnected', () => { sharedBrowser = null; });
   }
   return sharedBrowser;
 }
 
 async function getRenderedHtml(url: string, waitForSelector: string): Promise<string> {
-  const browser = await getBrowser();
-  const page = await browser.newPage();
+  let browser: Browser;
+  try {
+    browser = await getBrowser();
+  } catch {
+    return '';
+  }
+  const page = await browser.newPage().catch(() => null);
+  if (!page) return '';
   try {
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent(
@@ -39,9 +46,9 @@ async function getRenderedHtml(url: string, waitForSelector: string): Promise<st
     );
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {});
     await page.waitForSelector(waitForSelector, { timeout: 25_000 }).catch(() => {});
-    return page.content();
+    return await page.content().catch(() => '');
   } finally {
-    await page.close();
+    await page.close().catch(() => {});
   }
 }
 

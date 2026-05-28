@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { AlertCreation } from '../../domain/usecases/AlertCreation';
 import { AlertListing } from '../../domain/usecases/AlertListing';
 import { AlertRemoval } from '../../domain/usecases/AlertRemoval';
@@ -12,20 +12,13 @@ import { InvalidAlertCondition } from '../../domain/exceptions/AlertErrors';
 import { Money } from '../../domain/valueObjects/Money';
 
 export class AlertController {
-  public readonly router: Router;
-
   constructor(
     private readonly creation: AlertCreation,
     private readonly removal: AlertRemoval,
     private readonly listing: AlertListing,
-  ) {
-    this.router = Router();
-    this.router.post('/', this.create);
-    this.router.delete('/:id', this.remove);
-    this.router.get('/', this.list);
-  }
+  ) {}
 
-  private create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const condition = this.parseCondition(req.body.condition);
       const alert = await this.creation.create({
@@ -39,7 +32,7 @@ export class AlertController {
     }
   };
 
-  private remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       await this.removal.remove(req.params.id!);
       res.status(204).send();
@@ -48,7 +41,7 @@ export class AlertController {
     }
   };
 
-  private list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const alerts = await this.listing.list(req.userId!);
       res.status(200).json(alerts);

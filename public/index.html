@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reference — Comparador de precios</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f5f7;
+      --surface: #ffffff;
+      --border: #e0e0e0;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --amazon: #ff9900;
+      --ml: #ffe600;
+      --radius: 10px;
+      --shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-brand { font-weight: 700; font-size: 1.1rem; color: var(--accent); }
+    .nav-links { display: flex; gap: .25rem; flex: 1; }
+    .nav-btn {
+      background: none; border: none; cursor: pointer;
+      padding: .4rem .85rem; border-radius: 6px;
+      font-size: .875rem; color: var(--muted);
+      transition: background .15s, color .15s;
+    }
+    .nav-btn:hover { background: var(--bg); color: var(--text); }
+    .nav-btn.active { background: #eff6ff; color: var(--accent); font-weight: 600; }
+    .nav-auth { margin-left: auto; display: flex; gap: .5rem; align-items: center; }
+    #user-label { font-size: .8rem; color: var(--muted); }
+
+    /* ── MAIN ── */
+    main { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+
+    /* ── TABS ── */
+    .tab { display: none; }
+    .tab.active { display: block; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      padding: .5rem 1.1rem; border-radius: 7px; border: none;
+      font-size: .875rem; cursor: pointer; font-weight: 500;
+      transition: background .15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-ghost {
+      background: none; border: 1px solid var(--border); color: var(--text);
+    }
+    .btn-ghost:hover { background: var(--bg); }
+    .btn-danger { background: none; border: none; color: var(--danger); cursor: pointer; font-size: .8rem; }
+    .btn-danger:hover { text-decoration: underline; }
+
+    /* ── INPUTS ── */
+    input, select {
+      border: 1px solid var(--border); border-radius: 7px;
+      padding: .5rem .75rem; font-size: .875rem; width: 100%;
+      background: var(--surface); color: var(--text);
+      transition: border-color .15s;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    label { font-size: .8rem; color: var(--muted); display: block; margin-bottom: .3rem; }
+
+    /* ── SEARCH TAB ── */
+    .search-bar {
+      display: flex; gap: .75rem; margin-bottom: 1rem;
+    }
+    .search-bar input { flex: 1; }
+
+    .weights-toggle {
+      background: none; border: none; cursor: pointer;
+      font-size: .8rem; color: var(--muted); margin-bottom: 1rem;
+      text-decoration: underline dotted;
+    }
+    .weights-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem;
+      display: none; margin-bottom: 1rem;
+    }
+    .weights-panel.open { display: block; }
+    .weights-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem;
+    }
+    .weights-grid input { text-align: center; }
+
+    /* ── RESULTS ── */
+    .results-meta {
+      font-size: .8rem; color: var(--muted); margin-bottom: .75rem;
+    }
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    .product-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem;
+      box-shadow: var(--shadow); display: flex; flex-direction: column; gap: .5rem;
+    }
+    .product-card .store-badge {
+      font-size: .7rem; font-weight: 700; padding: .15rem .45rem;
+      border-radius: 4px; align-self: flex-start; text-transform: uppercase;
+    }
+    .badge-amazon { background: var(--amazon); color: #000; }
+    .badge-mercadolibre { background: var(--ml); color: #000; }
+    .badge-default { background: #e5e7eb; color: #374151; }
+    .product-card .title {
+      font-size: .875rem; font-weight: 600; line-height: 1.3;
+    }
+    .product-card .price {
+      font-size: 1.1rem; font-weight: 700; color: var(--accent);
+    }
+    .product-card .score {
+      font-size: .75rem; color: var(--muted);
+    }
+    .score-bar {
+      height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden;
+    }
+    .score-fill { height: 100%; background: var(--accent); border-radius: 2px; }
+    .card-actions { display: flex; gap: .5rem; margin-top: auto; padding-top: .5rem; }
+    .card-actions a {
+      font-size: .78rem; color: var(--accent); text-decoration: none;
+    }
+    .card-actions a:hover { text-decoration: underline; }
+
+    /* ── WATCHLIST / ALERTS ── */
+    .section-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1rem;
+    }
+    .section-header h2 { font-size: 1.1rem; }
+
+    .item-list { display: flex; flex-direction: column; gap: .75rem; }
+    .item-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem;
+      display: flex; align-items: flex-start; gap: 1rem;
+      box-shadow: var(--shadow);
+    }
+    .item-card .item-info { flex: 1; min-width: 0; }
+    .item-card .item-title {
+      font-size: .875rem; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .item-card .item-sub { font-size: .78rem; color: var(--muted); margin-top: .15rem; }
+    .item-card .item-price {
+      font-weight: 700; color: var(--accent); white-space: nowrap;
+    }
+
+    /* ── MODALS ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.4);
+      display: none; align-items: center; justify-content: center; z-index: 200;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border-radius: 14px;
+      padding: 1.75rem; width: 360px; box-shadow: 0 8px 30px rgba(0,0,0,.15);
+    }
+    .modal h3 { margin-bottom: 1.25rem; font-size: 1rem; }
+    .form-group { margin-bottom: .9rem; }
+    .modal-tabs { display: flex; gap: .5rem; margin-bottom: 1.25rem; }
+    .modal-tab {
+      flex: 1; padding: .4rem; border: 1px solid var(--border);
+      border-radius: 6px; cursor: pointer; background: none;
+      font-size: .875rem; color: var(--muted);
+    }
+    .modal-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .modal-footer { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+    .modal-error { font-size: .8rem; color: var(--danger); margin-top: .5rem; }
+
+    /* Add modal forms */
+    #add-watchlist-form .form-group,
+    #add-alert-form .form-group { margin-bottom: .85rem; }
+
+    /* ── EMPTY / LOADING ── */
+    .empty-state {
+      text-align: center; padding: 3rem 1rem; color: var(--muted);
+    }
+    .loading { text-align: center; padding: 2rem; color: var(--muted); font-size: .9rem; }
+    .spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .6s linear infinite;
+      vertical-align: middle; margin-right: .4rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      background: #1f2937; color: #fff; padding: .65rem 1.1rem;
+      border-radius: 8px; font-size: .85rem;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s;
+    }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-brand">Reference</span>
+  <div class="nav-links">
+    <button class="nav-btn active" data-tab="search">Buscar</button>
+    <button class="nav-btn" data-tab="watchlist">Watchlist</button>
+    <button class="nav-btn" data-tab="alerts">Alertas</button>
+  </div>
+  <div class="nav-auth">
+    <span id="user-label"></span>
+    <button class="btn btn-ghost" id="auth-btn" style="font-size:.8rem;padding:.35rem .8rem">Iniciar sesión</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ── SEARCH TAB ── -->
+  <section id="tab-search" class="tab active">
+    <div class="search-bar">
+      <input id="search-input" type="text" placeholder="ej. iPhone 15, laptop gaming, …" autocomplete="off" />
+      <button class="btn btn-primary" id="search-btn">Buscar</button>
+    </div>
+    <button class="weights-toggle" id="weights-toggle">⚙ Ajustar pesos de ranking</button>
+    <div class="weights-panel" id="weights-panel">
+      <div class="weights-grid">
+        <div>
+          <label>Precio</label>
+          <input type="number" id="w-price" value="0.25" min="0" max="1" step="0.05" />
+        </div>
+        <div>
+          <label>Stock</label>
+          <input type="number" id="w-stock" value="0.25" min="0" max="1" step="0.05" />
+        </div>
+        <div>
+          <label>Envío</label>
+          <input type="number" id="w-delivery" value="0.25" min="0" max="1" step="0.05" />
+        </div>
+        <div>
+          <label>MSI</label>
+          <input type="number" id="w-msi" value="0.25" min="0" max="1" step="0.05" />
+        </div>
+      </div>
+    </div>
+    <div id="search-results"></div>
+  </section>
+
+  <!-- ── WATCHLIST TAB ── -->
+  <section id="tab-watchlist" class="tab">
+    <div class="section-header">
+      <h2>Mi watchlist</h2>
+      <button class="btn btn-primary" id="add-watchlist-btn">+ Agregar</button>
+    </div>
+    <div id="watchlist-list"></div>
+  </section>
+
+  <!-- ── ALERTS TAB ── -->
+  <section id="tab-alerts" class="tab">
+    <div class="section-header">
+      <h2>Mis alertas</h2>
+      <button class="btn btn-primary" id="add-alert-btn">+ Nueva alerta</button>
+    </div>
+    <div id="alerts-list"></div>
+  </section>
+
+</main>
+
+<!-- ── AUTH MODAL ── -->
+<div class="modal-overlay" id="auth-modal">
+  <div class="modal">
+    <div class="modal-tabs">
+      <button class="modal-tab active" data-form="login">Entrar</button>
+      <button class="modal-tab" data-form="register">Registrarse</button>
+    </div>
+    <!-- Login -->
+    <div id="form-login">
+      <div class="form-group"><label>Email</label><input type="email" id="login-email" /></div>
+      <div class="form-group"><label>Contraseña</label><input type="password" id="login-password" /></div>
+      <div class="modal-error" id="login-error"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="auth-modal">Cancelar</button>
+        <button class="btn btn-primary" id="login-submit">Entrar</button>
+      </div>
+    </div>
+    <!-- Register -->
+    <div id="form-register" style="display:none">
+      <div class="form-group"><label>Nombre (sin espacios)</label><input type="text" id="reg-name" /></div>
+      <div class="form-group"><label>Email</label><input type="email" id="reg-email" /></div>
+      <div class="form-group"><label>Contraseña</label><input type="password" id="reg-password" /></div>
+      <div class="modal-error" id="reg-error"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="auth-modal">Cancelar</button>
+        <button class="btn btn-primary" id="reg-submit">Crear cuenta</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADD WATCHLIST MODAL ── -->
+<div class="modal-overlay" id="wl-modal">
+  <div class="modal">
+    <h3>Agregar a watchlist</h3>
+    <form id="add-watchlist-form">
+      <div class="form-group"><label>URL del producto</label><input type="url" id="wl-url" placeholder="https://www.amazon.com.mx/…" /></div>
+      <div class="form-group">
+        <label>Tienda</label>
+        <select id="wl-store">
+          <option value="amazon">Amazon MX</option>
+          <option value="mercadolibre">MercadoLibre</option>
+        </select>
+      </div>
+      <div class="modal-error" id="wl-error"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close="wl-modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Agregar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── ADD ALERT MODAL ── -->
+<div class="modal-overlay" id="alert-modal">
+  <div class="modal">
+    <h3>Nueva alerta</h3>
+    <form id="add-alert-form">
+      <div class="form-group"><label>URL del producto</label><input type="url" id="al-url" /></div>
+      <div class="form-group">
+        <label>Tipo de alerta</label>
+        <select id="al-kind">
+          <option value="PriceBelow">Precio menor a…</option>
+          <option value="PriceAtMin">Mínimo histórico</option>
+          <option value="PriceDropPct">Bajada de %</option>
+        </select>
+      </div>
+      <div id="al-extra"></div>
+      <div class="modal-error" id="al-error"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close="alert-modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Crear</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+const API = 'http://localhost:3000';
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let accessToken  = localStorage.getItem('accessToken')  || null;
+let refreshToken = localStorage.getItem('refreshToken') || null;
+let userEmail    = localStorage.getItem('userEmail')    || null;
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── HTTP HELPERS ───────────────────────────────────────────────────────────
+async function api(method, path, body, auth = false) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (auth && accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+  const res = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  if (res.status === 204) return null;
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || `Error ${res.status}`);
+  return data;
+}
+
+async function tryRefresh() {
+  if (!refreshToken) return false;
+  try {
+    const data = await api('POST', '/auth/refresh', { refreshToken });
+    accessToken = data.accessToken;
+    refreshToken = data.refreshToken;
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    return true;
+  } catch { return false; }
+}
+
+async function authApi(method, path, body) {
+  try {
+    return await api(method, path, body, true);
+  } catch (err) {
+    if (err.message === 'Token invalid' && await tryRefresh()) {
+      return await api(method, path, body, true);
+    }
+    throw err;
+  }
+}
+
+// ── AUTH UI ────────────────────────────────────────────────────────────────
+function updateAuthUI() {
+  const btn = document.getElementById('auth-btn');
+  const label = document.getElementById('user-label');
+  if (accessToken && userEmail) {
+    label.textContent = userEmail;
+    btn.textContent = 'Cerrar sesión';
+  } else {
+    label.textContent = '';
+    btn.textContent = 'Iniciar sesión';
+  }
+}
+
+document.getElementById('auth-btn').addEventListener('click', () => {
+  if (accessToken) {
+    accessToken = refreshToken = userEmail = null;
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userEmail');
+    updateAuthUI();
+    toast('Sesión cerrada');
+  } else {
+    openModal('auth-modal');
+  }
+});
+
+// modal tabs
+document.querySelectorAll('.modal-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.modal-tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('form-login').style.display = t.dataset.form === 'login' ? '' : 'none';
+    document.getElementById('form-register').style.display = t.dataset.form === 'register' ? '' : 'none';
+  });
+});
+
+document.getElementById('login-submit').addEventListener('click', async () => {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  try {
+    const data = await api('POST', '/auth/login', { email, password });
+    accessToken = data.accessToken; refreshToken = data.refreshToken; userEmail = email;
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    localStorage.setItem('userEmail', email);
+    updateAuthUI();
+    closeModal('auth-modal');
+    toast('Bienvenido');
+  } catch (e) { errEl.textContent = e.message; }
+});
+
+document.getElementById('reg-submit').addEventListener('click', async () => {
+  const name = document.getElementById('reg-name').value;
+  const email = document.getElementById('reg-email').value;
+  const password = document.getElementById('reg-password').value;
+  const errEl = document.getElementById('reg-error');
+  errEl.textContent = '';
+  try {
+    const data = await api('POST', '/auth/register', { name, email, password });
+    accessToken = data.accessToken; refreshToken = data.refreshToken; userEmail = email;
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    localStorage.setItem('userEmail', email);
+    updateAuthUI();
+    closeModal('auth-modal');
+    toast('Cuenta creada');
+  } catch (e) { errEl.textContent = e.message; }
+});
+
+// ── MODALS ─────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.addEventListener('click', () => closeModal(btn.dataset.close));
+});
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) closeModal(ov.id); });
+});
+
+// ── TABS ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    if (btn.dataset.tab === 'watchlist') loadWatchlist();
+    if (btn.dataset.tab === 'alerts') loadAlerts();
+  });
+});
+
+// ── SEARCH ─────────────────────────────────────────────────────────────────
+document.getElementById('weights-toggle').addEventListener('click', () => {
+  document.getElementById('weights-panel').classList.toggle('open');
+});
+
+document.getElementById('search-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('search-btn').click();
+});
+
+document.getElementById('search-btn').addEventListener('click', async () => {
+  const query = document.getElementById('search-input').value.trim();
+  if (!query) return;
+  const btn = document.getElementById('search-btn');
+  const container = document.getElementById('search-results');
+  btn.disabled = true;
+  container.innerHTML = `<div class="loading"><span class="spinner"></span>Buscando…</div>`;
+  try {
+    const qs = new URLSearchParams({
+      q:        query,
+      price:    document.getElementById('w-price').value,
+      stock:    document.getElementById('w-stock').value,
+      delivery: document.getElementById('w-delivery').value,
+      msi:      document.getElementById('w-msi').value,
+    });
+    const data = await api('GET', `/search?${qs}`);
+    renderResults(data, container);
+  } catch (e) {
+    container.innerHTML = `<div class="empty-state">Error: ${e.message}</div>`;
+  } finally { btn.disabled = false; }
+});
+
+function storeBadge(store) {
+  const s = (store || '').toLowerCase();
+  if (s.includes('amazon')) return `<span class="store-badge badge-amazon">Amazon</span>`;
+  if (s.includes('mercado')) return `<span class="store-badge badge-mercadolibre">MercadoLibre</span>`;
+  return `<span class="store-badge badge-default">${store}</span>`;
+}
+
+function renderResults(data, container) {
+  if (!data.results || data.results.length === 0) {
+    container.innerHTML = `<div class="empty-state">Sin resultados para "<strong>${data.query}</strong>"</div>`;
+    return;
+  }
+  const cache = data.fromCache ? ' · <span title="resultado cacheado">📦 caché</span>' : '';
+  container.innerHTML = `<p class="results-meta">${data.results.length} resultados para "<strong>${data.query}</strong>"${cache}</p>`;
+  const grid = document.createElement('div');
+  grid.className = 'results-grid';
+  data.results.forEach(p => {
+    const price = p.price ? `${p.price.currency} ${Number(p.price.amount).toLocaleString('es-MX')}` : '—';
+    const scorePct = Math.round((p.score || 0) * 100);
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    card.innerHTML = `
+      ${storeBadge(p.store)}
+      <div class="title">${p.title}</div>
+      <div class="price">${price}</div>
+      <div class="score">Score: ${scorePct}%</div>
+      <div class="score-bar"><div class="score-fill" style="width:${scorePct}%"></div></div>
+      <div class="card-actions">
+        <a href="${p.url}" target="_blank" rel="noopener">Ver en tienda ↗</a>
+        ${accessToken ? `<button class="btn-danger" style="margin-left:auto" onclick="quickAddWatchlist('${p.url}','${p.store}')">+ Watchlist</button>` : ''}
+      </div>`;
+    grid.appendChild(card);
+  });
+  container.appendChild(grid);
+}
+
+async function quickAddWatchlist(url, store) {
+  if (!accessToken) { toast('Inicia sesión primero'); return; }
+  const storeKey = (store || '').toLowerCase().includes('amazon') ? 'amazon' : 'mercadolibre';
+  try {
+    await authApi('POST', '/watchlist', { productUrl: url, store: storeKey });
+    toast('Agregado a watchlist');
+  } catch (e) { toast(e.message); }
+}
+
+// ── WATCHLIST ──────────────────────────────────────────────────────────────
+async function loadWatchlist() {
+  const container = document.getElementById('watchlist-list');
+  if (!accessToken) {
+    container.innerHTML = `<div class="empty-state">Inicia sesión para ver tu watchlist</div>`;
+    return;
+  }
+  container.innerHTML = `<div class="loading"><span class="spinner"></span>Cargando…</div>`;
+  try {
+    const items = await authApi('GET', '/watchlist');
+    renderWatchlist(items, container);
+  } catch (e) {
+    container.innerHTML = `<div class="empty-state">Error: ${e.message}</div>`;
+  }
+}
+
+function renderWatchlist(items, container) {
+  if (!items || items.length === 0) {
+    container.innerHTML = `<div class="empty-state">Tu watchlist está vacía</div>`;
+    return;
+  }
+  const list = document.createElement('div');
+  list.className = 'item-list';
+  items.forEach(item => {
+    const price = item.currentPrice
+      ? `${item.currentPrice.currency} ${Number(item.currentPrice.amount).toLocaleString('es-MX')}`
+      : 'Sin precio';
+    const el = document.createElement('div');
+    el.className = 'item-card';
+    el.innerHTML = `
+      <div class="item-info">
+        <div class="item-title">${item.title || item.productUrl}</div>
+        <div class="item-sub">${storeBadge(item.store)} &nbsp;<a href="${item.productUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-size:.75rem">Ver producto ↗</a></div>
+      </div>
+      <div style="text-align:right">
+        <div class="item-price">${price}</div>
+        <div style="display:flex;gap:.4rem;margin-top:.4rem;justify-content:flex-end">
+          <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem" onclick="openAlertForProduct('${item.productUrl}')">+ Alerta</button>
+          <button class="btn-danger" onclick="removeWatchlist('${item.id}',this)">Eliminar</button>
+        </div>
+      </div>`;
+    list.appendChild(el);
+  });
+  container.innerHTML = '';
+  container.appendChild(list);
+}
+
+async function removeWatchlist(id, btn) {
+  btn.disabled = true;
+  try {
+    await authApi('DELETE', `/watchlist/${id}`);
+    toast('Eliminado');
+    loadWatchlist();
+  } catch (e) { toast(e.message); btn.disabled = false; }
+}
+
+document.getElementById('add-watchlist-btn').addEventListener('click', () => {
+  if (!accessToken) { toast('Inicia sesión primero'); return; }
+  document.getElementById('wl-error').textContent = '';
+  openModal('wl-modal');
+});
+
+document.getElementById('add-watchlist-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const url = document.getElementById('wl-url').value;
+  const store = document.getElementById('wl-store').value;
+  const errEl = document.getElementById('wl-error');
+  errEl.textContent = '';
+  try {
+    await authApi('POST', '/watchlist', { productUrl: url, store });
+    closeModal('wl-modal');
+    toast('Agregado a watchlist');
+    loadWatchlist();
+  } catch (e) { errEl.textContent = e.message; }
+});
+
+// ── ALERTS ─────────────────────────────────────────────────────────────────
+async function loadAlerts() {
+  const container = document.getElementById('alerts-list');
+  if (!accessToken) {
+    container.innerHTML = `<div class="empty-state">Inicia sesión para ver tus alertas</div>`;
+    return;
+  }
+  container.innerHTML = `<div class="loading"><span class="spinner"></span>Cargando…</div>`;
+  try {
+    const alerts = await authApi('GET', '/alerts');
+    renderAlerts(alerts, container);
+  } catch (e) {
+    container.innerHTML = `<div class="empty-state">Error: ${e.message}</div>`;
+  }
+}
+
+function conditionLabel(condition) {
+  if (!condition) return '—';
+  switch (condition.kind) {
+    case 'PriceBelow':
+      return `Precio bajo ${condition.threshold?.currency || 'MXN'} ${Number(condition.threshold?.amount || 0).toLocaleString('es-MX')}`;
+    case 'PriceAtMin':
+      return `Mínimo de ${condition.lookbackDays || 30} días`;
+    case 'PriceDropPct':
+      return `Baja ${condition.percent}% en ${condition.lookbackDays || 30} días`;
+    default:
+      return condition.kind;
+  }
+}
+
+function renderAlerts(alerts, container) {
+  if (!alerts || alerts.length === 0) {
+    container.innerHTML = `<div class="empty-state">Sin alertas activas</div>`;
+    return;
+  }
+  const list = document.createElement('div');
+  list.className = 'item-list';
+  alerts.forEach(alert => {
+    const el = document.createElement('div');
+    el.className = 'item-card';
+    el.innerHTML = `
+      <div class="item-info">
+        <div class="item-title">${conditionLabel(alert.condition)}</div>
+        <div class="item-sub"><a href="${alert.productUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-size:.75rem">${alert.productUrl}</a></div>
+      </div>
+      <div>
+        <button class="btn-danger" onclick="removeAlert('${alert.id}',this)">Eliminar</button>
+      </div>`;
+    list.appendChild(el);
+  });
+  container.innerHTML = '';
+  container.appendChild(list);
+}
+
+async function removeAlert(id, btn) {
+  btn.disabled = true;
+  try {
+    await authApi('DELETE', `/alerts/${id}`);
+    toast('Alerta eliminada');
+    loadAlerts();
+  } catch (e) { toast(e.message); btn.disabled = false; }
+}
+
+function openAlertForProduct(url) {
+  if (!accessToken) { toast('Inicia sesión primero'); return; }
+  document.getElementById('al-url').value = url;
+  document.getElementById('al-error').textContent = '';
+  renderAlertExtra();
+  openModal('alert-modal');
+}
+
+document.getElementById('add-alert-btn').addEventListener('click', () => {
+  if (!accessToken) { toast('Inicia sesión primero'); return; }
+  document.getElementById('al-url').value = '';
+  document.getElementById('al-error').textContent = '';
+  renderAlertExtra();
+  openModal('alert-modal');
+});
+
+document.getElementById('al-kind').addEventListener('change', renderAlertExtra);
+
+function renderAlertExtra() {
+  const kind = document.getElementById('al-kind').value;
+  const el = document.getElementById('al-extra');
+  if (kind === 'PriceBelow') {
+    el.innerHTML = `
+      <div class="form-group"><label>Monto (MXN)</label><input type="number" id="al-amount" placeholder="9000" /></div>`;
+  } else if (kind === 'PriceAtMin') {
+    el.innerHTML = `
+      <div class="form-group"><label>Días de historial</label><input type="number" id="al-days" value="30" /></div>`;
+  } else if (kind === 'PriceDropPct') {
+    el.innerHTML = `
+      <div class="form-group"><label>Porcentaje de bajada</label><input type="number" id="al-pct" placeholder="10" /></div>
+      <div class="form-group"><label>Días de historial</label><input type="number" id="al-days" value="30" /></div>`;
+  }
+}
+
+document.getElementById('add-alert-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const url = document.getElementById('al-url').value;
+  const kind = document.getElementById('al-kind').value;
+  const errEl = document.getElementById('al-error');
+  errEl.textContent = '';
+  let condition;
+  if (kind === 'PriceBelow') {
+    condition = { kind, amount: String(document.getElementById('al-amount').value), currency: 'MXN' };
+  } else if (kind === 'PriceAtMin') {
+    condition = { kind, lookbackDays: Number(document.getElementById('al-days').value) };
+  } else {
+    condition = { kind, percent: Number(document.getElementById('al-pct').value), lookbackDays: Number(document.getElementById('al-days').value) };
+  }
+  try {
+    await authApi('POST', '/alerts', { productUrl: url, condition });
+    closeModal('alert-modal');
+    toast('Alerta creada');
+    loadAlerts();
+  } catch (e) { errEl.textContent = e.message; }
+});
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+updateAuthUI();
+</script>
+</body>
+</html>

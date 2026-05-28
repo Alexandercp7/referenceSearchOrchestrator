@@ -1,25 +1,21 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { ProductSearch } from '../../domain/usecases/ProductSearch';
 import { SearchWeights } from '../../domain/valueObjects/SearchWeights';
 
 export class SearchController {
-  public readonly router: Router;
+  constructor(private readonly productSearch: ProductSearch) {}
 
-  constructor(private readonly productSearch: ProductSearch) {
-    this.router = Router();
-    this.router.post('/', this.search);
-  }
-
-  private search = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  search = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const w = req.body.weights ?? {};
-      const weights = new SearchWeights(
-        w.price ?? 0.25,
-        w.stock ?? 0.25,
-        w.delivery ?? 0.25,
-        w.msi ?? 0.25,
-      );
-      const response = await this.productSearch.search({ query: req.body.query, weights });
+      const price = Number(req.query.price ?? 0.25);
+      const stock = Number(req.query.stock ?? 0.25);
+      const delivery = Number(req.query.delivery ?? 0.25);
+      const msi = Number(req.query.msi ?? 0.25);
+      const weights = new SearchWeights(price, stock, delivery, msi);
+      const response = await this.productSearch.search({
+        query: String(req.query.q ?? ''),
+        weights,
+      });
       res.status(200).json(response);
     } catch (err) {
       next(err);

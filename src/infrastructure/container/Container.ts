@@ -1,5 +1,5 @@
-import express, { Express } from 'express';
-import '../http/ExpressTypes';
+import { Express } from 'express';
+import { buildServer } from '../../presentation/server';
 
 import { pool } from '../persistence/mysql/connection';
 import { MysqlUserRepository } from '../persistence/mysql/MysqlUserRepository';
@@ -42,8 +42,6 @@ import { PriceHistoryController } from '../controller/PriceHistoryController';
 import { SearchController } from '../controller/SearchController';
 import { WatchlistController } from '../controller/WatchlistController';
 
-import { authMiddleware } from '../http/AuthMiddleware';
-import { errorHandler } from '../http/ErrorHandler';
 import { PriceTrackingJob } from '../scheduler/PriceTrackingJob';
 
 import { PriceAtMinEvaluator } from '../../domain/services/PriceAtMinEvaluator';
@@ -160,20 +158,14 @@ export class Container {
     const alertController = new AlertController(alertCreation, alertRemoval, alertListing);
 
     // ─── Express app ──────────────────────────────────────────────────
-    const app = express();
-    app.use(express.json());
-
-    app.get('/health', (_req, res) => res.status(200).json({ ok: true }));
-
-    app.use('/auth', authController.router);
-    app.use('/search', searchController.router);
-
-    const requireAuth = authMiddleware(tokens);
-    app.use('/watchlist', requireAuth, watchlistController.router);
-    app.use('/alerts', requireAuth, alertController.router);
-    app.use('/price-history', requireAuth, priceHistoryController.router);
-
-    app.use(errorHandler);
+    const app = buildServer({
+      tokens,
+      authController,
+      searchController,
+      watchlistController,
+      alertController,
+      priceHistoryController,
+    });
 
     // ─── Scheduler ────────────────────────────────────────────────────
     const scheduler = new PriceTrackingJob(

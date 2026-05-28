@@ -1,25 +1,18 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { TokenRefresh } from '../../domain/usecases/TokenRefresh';
 import { UserLogin } from '../../domain/usecases/UserLogin';
 import { UserRegistration } from '../../domain/usecases/UserRegistration';
 
 export class AuthController {
-  public readonly router: Router;
-
   constructor(
-    private readonly registration: UserRegistration,
-    private readonly login: UserLogin,
-    private readonly tokenRefresh: TokenRefresh,
-  ) {
-    this.router = Router();
-    this.router.post('/register', this.register);
-    this.router.post('/login', this.loginHandler);
-    this.router.post('/refresh', this.refresh);
-  }
+    private readonly registrationUseCase: UserRegistration,
+    private readonly loginUseCase: UserLogin,
+    private readonly tokenRefreshUseCase: TokenRefresh,
+  ) {}
 
-  private register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const response = await this.registration.register({
+      const response = await this.registrationUseCase.register({
         email: req.body.email,
         password: req.body.password,
         name: req.body.name,
@@ -30,9 +23,9 @@ export class AuthController {
     }
   };
 
-  private loginHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const response = await this.login.login({
+      const response = await this.loginUseCase.login({
         email: req.body.email,
         password: req.body.password,
       });
@@ -42,9 +35,9 @@ export class AuthController {
     }
   };
 
-  private refresh = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  refresh = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const tokens = await this.tokenRefresh.refresh(req.body.refreshToken);
+      const tokens = await this.tokenRefreshUseCase.refresh(req.body.refreshToken);
       res.status(200).json(tokens);
     } catch (err) {
       next(err);
