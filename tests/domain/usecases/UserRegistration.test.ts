@@ -50,7 +50,7 @@ describe('UserRegistration', () => {
   beforeEach(() => {
     users = new FakeUserRepo();
     auth = new FakeAuth();
-    registration = new UserRegistration(users, auth);
+    registration = new UserRegistration(users, auth, auth);
   });
 
   it('registers a new user and returns tokens', async () => {

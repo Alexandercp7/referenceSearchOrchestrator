@@ -1,4 +1,5 @@
-import { RawProduct, Store } from '../../domain/interfaces/stores/Store';
+import { RawProduct } from '../../domain/dtos/search/RawProduct';
+import { Store } from '../../domain/interfaces/stores/Store';
 
 export class MockMercadoLibreStore implements Store {
   readonly name = 'mercadolibre';

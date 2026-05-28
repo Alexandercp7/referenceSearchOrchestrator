@@ -232,6 +232,26 @@ Producto con score de ranking calculado por `WeightedRankStrategy`.
 
 ---
 
+### RawProduct
+**Archivo:** `src/domain/dtos/search/RawProduct.ts`
+
+Datos crudos que devuelve una tienda externa antes de normalización. El `Normalizer` lo convierte en `Product`.
+
+```typescript
+interface RawProduct {
+  title: string
+  priceText: string       // texto crudo: "MX$1,299.00"
+  currency: string        // "MXN", "USD", etc.
+  store: string
+  url: string
+  inStockText: string     // "En stock" | "Agotado"
+  deliveryText: string    // "Llega en 2 días"
+  msiText: string         // "12 MSI" | ""
+}
+```
+
+---
+
 ## Use Cases
 
 Cada use case encapsula una sola operación de negocio. Se instancian con sus dependencias inyectadas (repositorios, gateways, servicios). **Nunca se llaman entre sí.**
@@ -299,7 +319,7 @@ search(request: { query, weights }) → SearchResponse
 7. Guarda en caché con TTL (default 300 segundos).
 8. Devuelve `SearchResponse` con `fromCache: false`.
 
-**Dependencias:** `SearchableStore[]`, `Normalizer`, `RankStrategy`, `SearchCache`
+**Dependencias:** `StoreProductSearch[]`, `Normalizer`, `RankStrategy`, `SearchCache`
 
 ---
 
@@ -310,7 +330,7 @@ search(request: { query, weights }) → SearchResponse
 
 Agrega un producto a la watchlist del usuario y guarda un snapshot inicial de precio.
 
-**Dependencias:** `WatchlistRepository`, `PriceHistoryRepository`, `Map<string, FetchableStore>`, `Normalizer`
+**Dependencias:** `WatchlistRepository`, `PriceHistoryRepository`, `Map<string, StoreProductLookup>`, `Normalizer`
 
 ---
 
@@ -341,13 +361,13 @@ Lista los items de watchlist de un usuario con el precio más reciente disponibl
 refresh() → void
 ```
 Job de fondo. Itera todos los items de watchlist:
-1. Busca el store correspondiente en el mapa `Map<storeName, FetchableStore>`.
+1. Busca el store correspondiente en el mapa `Map<storeName, StoreProductLookup>`.
 2. Llama `store.fetchOne(url)` para obtener el precio actualizado.
 3. Normaliza y guarda un nuevo `PriceSnapshot` con timestamp actual.
 
 Usa `Promise.allSettled` — si un item falla, los demás continúan.
 
-**Dependencias:** `WatchlistRepository`, `PriceHistoryRepository`, `Map<string, FetchableStore>`, `Normalizer`
+**Dependencias:** `WatchlistRepository`, `PriceHistoryRepository`, `Map<string, StoreProductLookup>`, `Normalizer`
 
 ---
 
@@ -502,6 +522,34 @@ Tipo compuesto: implementar `AuthGateway` significa implementar ambos.
 notify(user: User, alert: Alert, snapshot: PriceSnapshot): Promise<void>
 ```
 
+### Stores
+
+#### StoreProductSearch
+**Archivo:** `src/domain/interfaces/stores/StoreProductSearch.ts`
+
+```typescript
+readonly name: string
+search(query: string): Promise<RawProduct[]>
+```
+Puerto para buscar productos en una tienda por texto. `ProductSearch` recibe un array de estos para lanzar búsquedas en paralelo con `Promise.allSettled`.
+
+#### StoreProductLookup
+**Archivo:** `src/domain/interfaces/stores/StoreProductLookup.ts`
+
+```typescript
+readonly name: string
+fetchOne(url: string): Promise<RawProduct | null>
+```
+Puerto para consultar el precio y stock actuales de un producto por URL. Devuelve `null` si el producto no está disponible en la tienda. Usado por `WatchlistAddition` y `PriceRefresh`.
+
+#### Store
+**Archivo:** `src/domain/interfaces/stores/Store.ts`
+
+```typescript
+interface Store extends StoreProductSearch, StoreProductLookup {}
+```
+Interface completa de tienda: combina búsqueda y consulta de producto. Las implementaciones concretas (scrapers, mocks) la implementan. A diferencia de `AuthGateway` (un type alias), `Store` es una interface nombrada que puede extenderse con capacidades adicionales.
+
 ### Servicios
 
 #### RankStrategy
@@ -526,34 +574,6 @@ readonly kind: AlertCondition['kind']
 matches(condition: AlertCondition, snapshot: PriceSnapshot, history: PriceHistoryRepository): Promise<boolean>
 ```
 
-### Stores
-
-#### SearchableStore
-```typescript
-readonly name: string
-search(query: string): Promise<RawProduct[]>
-```
-
-#### FetchableStore
-```typescript
-readonly name: string
-fetchOne(url: string): Promise<RawProduct | null>
-```
-
-#### RawProduct
-```typescript
-interface RawProduct {
-  id: string
-  title: string
-  price: string | number    // texto crudo: "MX$1,299.00" o número
-  store: string
-  url: string
-  stockText?: string        // "En stock" | "Agotado" | undefined
-  deliveryText?: string     // "Llega en 2 días" | undefined
-  msiText?: string          // "12 MSI" | undefined
-}
-```
-`RawProduct` es lo que devuelven los scrapers. El `Normalizer` lo convierte en `Product`.
 
 ---
 

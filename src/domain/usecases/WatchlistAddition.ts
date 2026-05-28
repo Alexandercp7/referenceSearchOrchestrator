@@ -7,13 +7,13 @@ import { ItemAlreadyTracked, UnknownStore } from '../exceptions/WatchlistErrors'
 import { PriceHistoryRepository } from '../interfaces/repositories/PriceHistoryRepository';
 import { WatchlistRepository } from '../interfaces/repositories/WatchlistRepository';
 import { Normalizer } from '../interfaces/services/Normalizer';
-import { FetchableStore } from '../interfaces/stores/FetchableStore';
+import { StoreProductLookup } from '../interfaces/stores/StoreProductLookup';
 
 export class WatchlistAddition {
   constructor(
     private readonly watchlist: WatchlistRepository,
     private readonly history: PriceHistoryRepository,
-    private readonly stores: Map<string, FetchableStore>,
+    private readonly stores: Map<string, StoreProductLookup>,
     private readonly normalizer: Normalizer,
   ) {}
 
@@ -52,7 +52,12 @@ export class WatchlistAddition {
       product.price,
       now,
     );
-    await this.history.saveSnapshot(snapshot);
+    try {
+      await this.history.saveSnapshot(snapshot);
+    } catch (err) {
+      await this.watchlist.remove(item.id);
+      throw err;
+    }
 
     return item;
   }

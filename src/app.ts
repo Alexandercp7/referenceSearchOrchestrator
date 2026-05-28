@@ -1,7 +1,7 @@
 import express, { Express } from 'express';
 import './infrastructure/http/ExpressTypes';
-import { FetchableStore } from './domain/interfaces/stores/FetchableStore';
-import { SearchableStore } from './domain/interfaces/stores/SearchableStore';
+import { StoreProductLookup } from './domain/interfaces/stores/StoreProductLookup';
+import { StoreProductSearch } from './domain/interfaces/stores/StoreProductSearch';
 
 import { AlertCreation } from './domain/usecases/AlertCreation';
 import { AlertEvaluation } from './domain/usecases/AlertEvaluation';
@@ -44,10 +44,15 @@ import { PriceAtMinEvaluator } from './domain/services/PriceAtMinEvaluator';
 import { PriceBelowEvaluator } from './domain/services/PriceBelowEvaluator';
 import { PriceDropPctEvaluator } from './domain/services/PriceDropPctEvaluator';
 import { AlertConditionEvaluator } from './domain/interfaces/services/AlertConditionEvaluator';
+import { AlertCondition } from './domain/valueObjects/AlertCondition';
 
 export interface AppConfig {
   jwtSecret: string;
+  jwtAccessTtl: string;
+  jwtRefreshTtl: string;
+  bcryptRounds: number;
   schedulerIntervalMs: number;
+  cacheTtlSeconds: number;
 }
 
 export interface BuiltApp {
@@ -65,15 +70,16 @@ export function buildApp(config: AppConfig): BuiltApp {
 
   const auth = new JwtBcryptAuthGateway({
     secret: config.jwtSecret,
-    accessTtl: '15m',
-    refreshTtl: '7d',
+    accessTtl: config.jwtAccessTtl,
+    refreshTtl: config.jwtRefreshTtl,
+    bcryptRounds: config.bcryptRounds,
   });
   const notifier = new ConsoleNotificationGateway();
 
   const amazon = new MockAmazonStore();
   const mercadolibre = new MockMercadoLibreStore();
-  const searchableStores: SearchableStore[] = [amazon, mercadolibre];
-  const fetchableStores = new Map<string, FetchableStore>([
+  const searchableStores: StoreProductSearch[] = [amazon, mercadolibre];
+  const fetchableStores = new Map<string, StoreProductLookup>([
     [amazon.name, amazon],
     [mercadolibre.name, mercadolibre],
   ]);
@@ -81,7 +87,7 @@ export function buildApp(config: AppConfig): BuiltApp {
   const normalizer = new BasicNormalizer();
   const ranker = new WeightedRankStrategy();
 
-  const alertEvaluators = new Map<string, AlertConditionEvaluator>([
+  const alertEvaluators = new Map<AlertCondition['kind'], AlertConditionEvaluator>([
     ['PriceBelow', new PriceBelowEvaluator()],
     ['PriceAtMin', new PriceAtMinEvaluator()],
     ['PriceDropPct', new PriceDropPctEvaluator()],
@@ -92,7 +98,7 @@ export function buildApp(config: AppConfig): BuiltApp {
   const login = new UserLogin(usersRepo, auth, auth);
   const tokenRefresh = new TokenRefresh(auth);
 
-  const productSearch = new ProductSearch(searchableStores, normalizer, ranker, cache);
+  const productSearch = new ProductSearch(searchableStores, normalizer, ranker, cache, config.cacheTtlSeconds);
 
   const watchlistAddition = new WatchlistAddition(
     watchlistRepo,

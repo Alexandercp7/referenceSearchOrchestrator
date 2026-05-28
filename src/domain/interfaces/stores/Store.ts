@@ -1,8 +1,4 @@
-export type { RawProduct } from './RawProduct';
-export type { SearchableStore } from './SearchableStore';
-export type { FetchableStore } from './FetchableStore';
+import { StoreProductSearch } from './StoreProductSearch';
+import { StoreProductLookup } from './StoreProductLookup';
 
-import { FetchableStore } from './FetchableStore';
-import { SearchableStore } from './SearchableStore';
-
-export type Store = SearchableStore & FetchableStore;
+export interface Store extends StoreProductSearch, StoreProductLookup {}

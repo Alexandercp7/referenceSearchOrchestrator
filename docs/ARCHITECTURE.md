@@ -45,8 +45,8 @@ src/
 │   ├── dtos/                ← Contratos de entrada/salida de use cases
 │   ├── interfaces/          ← Puertos outbound (contratos que infra implementa)
 │   │   ├── repositories/    ← Persistencia de datos propios
-│   │   ├── stores/          ← Tiendas externas (datos ajenos, read-only)
-│   │   ├── gateways/        ← Servicios externos con efectos (auth, notif)
+│   │   ├── gateways/        ← Acceso a sistemas externos (auth, notificaciones)
+│   │   ├── stores/          ← Puertos de tiendas (búsqueda y consulta de productos)
 │   │   └── services/        ← Algoritmos sin estado infra-agnósticos
 │   ├── usecases/            ← Orquestación: un use case = una operación de negocio
 │   ├── services/            ← Servicios de dominio (evaluadores de condiciones)
@@ -80,7 +80,7 @@ ProductSearch (use case)   ← verifica caché → busca en stores → normaliza
      │
      ├── SearchCache        ← ¿hay resultado cacheado? devuelve con fromCache: true
      │
-     ├── SearchableStore[]  ← Promise.allSettled([amazon.search(), mercadolibre.search()])
+     ├── StoreProductSearch[]  ← Promise.allSettled([amazon.search(), mercadolibre.search()])
      │
      ├── Normalizer         ← RawProduct → Product (parsea texto, construye Money)
      │

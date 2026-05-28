@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import type { Element } from 'domhandler';
-import { RawProduct, Store } from '../../domain/interfaces/stores/Store';
+import { RawProduct } from '../../domain/dtos/search/RawProduct';
+import { Store } from '../../domain/interfaces/stores/Store';
 import { normalizeText, parseDeliveryDays } from './textUtils';
 
 const SEARCH_URL = 'https://www.amazon.com.mx/s?k=';

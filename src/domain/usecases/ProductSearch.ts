@@ -4,11 +4,11 @@ import { AllStoresFailed } from '../exceptions/SearchErrors';
 import { Normalizer } from '../interfaces/services/Normalizer';
 import { RankStrategy } from '../interfaces/services/RankStrategy';
 import { SearchCache } from '../interfaces/services/SearchCache';
-import { SearchableStore } from '../interfaces/stores/SearchableStore';
+import { StoreProductSearch } from '../interfaces/stores/StoreProductSearch';
 
 export class ProductSearch {
   constructor(
-    private readonly stores: SearchableStore[],
+    private readonly stores: StoreProductSearch[],
     private readonly normalizer: Normalizer,
     private readonly ranker: RankStrategy,
     private readonly cache: SearchCache,

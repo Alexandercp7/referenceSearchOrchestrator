@@ -300,7 +300,7 @@ Los productos se ordenan descendente por score (mejor primero).
 ### MockAmazonStore / MockMercadoLibreStore
 **Archivos:** `src/infrastructure/repositories/MockAmazonStore.ts`, `MockMercadoLibreStore.ts`
 
-Generan productos ficticios para desarrollo y testing. Implementan tanto `SearchableStore` como `FetchableStore`.
+Generan productos ficticios para desarrollo y testing. Implementan la interface `Store` (extiende `StoreProductSearch` y `StoreProductLookup`).
 
 - `search(query)` → devuelve N productos con precios aleatorios.
 - `fetchOne(url)` → devuelve un producto mock basado en la URL.

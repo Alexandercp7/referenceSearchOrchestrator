@@ -7,19 +7,18 @@ import {
 } from '../../domain/interfaces/gateways/AuthGateway';
 import { InvalidToken } from '../../domain/exceptions/UserErrors';
 
-const BCRYPT_ROUNDS = 10;
-
 export interface JwtConfig {
   secret: string;
-  accessTtl: SignOptions['expiresIn'];
-  refreshTtl: SignOptions['expiresIn'];
+  accessTtl: string;
+  refreshTtl: string;
+  bcryptRounds: number;
 }
 
 export class JwtBcryptAuthGateway implements AuthGateway {
   constructor(private readonly config: JwtConfig) {}
 
   async hashPassword(plain: string): Promise<string> {
-    return bcrypt.hash(plain, BCRYPT_ROUNDS);
+    return bcrypt.hash(plain, this.config.bcryptRounds);
   }
 
   async verifyPassword(plain: string, hash: string): Promise<boolean> {
@@ -28,10 +27,10 @@ export class JwtBcryptAuthGateway implements AuthGateway {
 
   async createTokens(payload: TokenPayload): Promise<TokenPair> {
     const accessToken = jwt.sign(payload, this.config.secret, {
-      expiresIn: this.config.accessTtl,
+      expiresIn: this.config.accessTtl as SignOptions['expiresIn'],
     });
     const refreshToken = jwt.sign({ ...payload, type: 'refresh' }, this.config.secret, {
-      expiresIn: this.config.refreshTtl,
+      expiresIn: this.config.refreshTtl as SignOptions['expiresIn'],
     });
     return { accessToken, refreshToken };
   }

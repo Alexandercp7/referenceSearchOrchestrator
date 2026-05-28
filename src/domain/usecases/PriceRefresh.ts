@@ -4,13 +4,13 @@ import { WatchlistItem } from '../entities/WatchlistItem';
 import { PriceHistoryRepository } from '../interfaces/repositories/PriceHistoryRepository';
 import { WatchlistRepository } from '../interfaces/repositories/WatchlistRepository';
 import { Normalizer } from '../interfaces/services/Normalizer';
-import { FetchableStore } from '../interfaces/stores/FetchableStore';
+import { StoreProductLookup } from '../interfaces/stores/StoreProductLookup';
 
 export class PriceRefresh {
   constructor(
     private readonly watchlist: WatchlistRepository,
     private readonly history: PriceHistoryRepository,
-    private readonly stores: Map<string, FetchableStore>,
+    private readonly stores: Map<string, StoreProductLookup>,
     private readonly normalizer: Normalizer,
   ) {}
 

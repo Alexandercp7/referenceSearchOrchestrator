@@ -1,5 +1,5 @@
 import { Product } from '../../entities/Product';
-import { RawProduct } from '../stores/Store';
+import { RawProduct } from '../../dtos/search/RawProduct';
 
 export interface Normalizer {
   normalize(raw: RawProduct): Product;

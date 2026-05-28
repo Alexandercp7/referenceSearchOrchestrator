@@ -75,28 +75,32 @@ src/domain/dtos/search/SearchResponse.ts
 - `results: RankedProduct[]`
 - `fromCache: boolean`
 
-### Paso 4 — Interfaces de stores
+### Paso 4 — DTO de tienda y gateways de store
 
 ```
-src/domain/interfaces/stores/RawProduct.ts
+src/domain/dtos/search/RawProduct.ts
 ```
-- Tipo plano (no clase) con los campos crudos que devuelve cualquier tienda externa:
-  `title`, `priceAmount`, `currency`, `store`, `url`, `stock`, `deliveryDays`, `msiMonths`.
+- Tipo plano con los campos crudos que devuelve cualquier tienda externa:
+  `title`, `priceText`, `currency`, `store`, `url`, `inStockText`, `deliveryText`, `msiText`.
+- Vive en `dtos/` porque es el dato de entrada al flujo de normalización, no un contrato de puerto.
+
+```
+src/domain/interfaces/stores/StoreProductSearch.ts
+```
+- `readonly name: string` + `search(query: string): Promise<RawProduct[]>`.
+- Puerto para buscar productos en una tienda por texto. Vive en `stores/` porque representa el concepto de dominio "tienda que devuelve productos".
+
+```
+src/domain/interfaces/stores/StoreProductLookup.ts
+```
+- `readonly name: string` + `fetchOne(url: string): Promise<RawProduct | null>`.
+- Puerto para consultar precio y stock de un producto por URL. Vive en `stores/` por la misma razón.
 
 ```
 src/domain/interfaces/stores/Store.ts
 ```
-- Interface base con `readonly name: string`.
-
-```
-src/domain/interfaces/stores/SearchableStore.ts
-```
-- Extiende `Store`. Declara `search(query: string): Promise<RawProduct[]>`.
-
-```
-src/domain/interfaces/stores/FetchableStore.ts
-```
-- Extiende `Store`. Declara `fetchOne(url: string): Promise<RawProduct | null>`.
+- `interface Store extends StoreProductSearch, StoreProductLookup {}`.
+- Interface completa de tienda: combina búsqueda y consulta de producto. Las implementaciones concretas (scrapers, mocks) la implementan.
 
 ### Paso 5 — Interfaces de servicios
 
@@ -122,7 +126,7 @@ src/domain/interfaces/services/SearchCache.ts
 src/domain/usecases/ProductSearch.ts
 ```
 
-Constructor recibe: `stores: SearchableStore[]`, `normalizer`, `ranker`, `cache`, `cacheTtlSeconds`.
+Constructor recibe: `stores: StoreProductSearch[]`, `normalizer`, `ranker`, `cache`, `cacheTtlSeconds`.
 
 Flujo de `search(request)`:
 1. Construir clave de caché a partir de `query` + los cuatro pesos.
@@ -228,7 +232,7 @@ src/domain/usecases/TokenRefresh.ts
 
 ## Grupo 3 — Watchlist (WatchlistAddition · WatchlistRemoval · WatchlistView)
 
-Requiere que el Grupo 1 esté completo (reutiliza `FetchableStore`, `Normalizer`, `Money`).
+Requiere que el Grupo 1 esté completo (reutiliza `StoreProductLookup`, `Normalizer`, `Money`).
 
 ### Paso 1 — Entidades
 
@@ -284,7 +288,7 @@ src/domain/interfaces/repositories/PriceHistoryRepository.ts
 src/domain/usecases/WatchlistAddition.ts
 ```
 1. Verificar que no exista ya el ítem → lanzar `ItemAlreadyTracked`.
-2. Buscar store en el `Map<string, FetchableStore>` → lanzar `UnknownStore` si no existe.
+2. Buscar store en el `Map<string, StoreProductLookup>` → lanzar `UnknownStore` si no existe.
 3. `fetchOne(url)` → lanzar `ProductNotFound` si devuelve `null`.
 4. Normalizar → crear `WatchlistItem` y `PriceSnapshot` con `randomUUID()`.
 5. Guardar ambos → devolver el `WatchlistItem`.
@@ -423,7 +427,7 @@ src/domain/usecases/PriceHistoryQuery.ts
 ```
 src/domain/usecases/PriceRefresh.ts
 ```
-Constructor recibe: `watchlist`, `history`, `stores: Map<string, FetchableStore>`, `normalizer`.
+Constructor recibe: `watchlist`, `history`, `stores: Map<string, StoreProductLookup>`, `normalizer`.
 
 Flujo de `refresh()`:
 1. `findAll()` → obtener todos los ítems del watchlist.
@@ -441,8 +445,8 @@ Grupo 0  →  DomainError
 
 Grupo 1  →  SearchWeights, Money
          →  SearchErrors
-         →  SearchRequest, RankedProduct, SearchResponse
-         →  RawProduct, Store, SearchableStore, FetchableStore
+         →  SearchRequest, RankedProduct, SearchResponse, RawProduct
+         →  StoreProductSearch, StoreProductLookup, Store
          →  Normalizer, RankStrategy, SearchCache
          →  ProductSearch ✓
 

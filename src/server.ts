@@ -1,17 +1,11 @@
 import { buildApp } from './app';
+import { config } from './config';
 
-const PORT = Number(process.env.PORT ?? 3000);
-const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret-change-me';
-const SCHEDULER_INTERVAL_MS = Number(process.env.SCHEDULER_INTERVAL_MS ?? 60_000);
+const { app, scheduler } = buildApp(config);
 
-const { app, scheduler } = buildApp({
-  jwtSecret: JWT_SECRET,
-  schedulerIntervalMs: SCHEDULER_INTERVAL_MS,
-});
-
-const server = app.listen(PORT, () => {
+const server = app.listen(config.port, () => {
   // eslint-disable-next-line no-console
-  console.log(`[server] listening on http://localhost:${PORT}`);
+  console.log(`[server] listening on http://localhost:${config.port}`);
   scheduler.start();
 });
 

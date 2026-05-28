@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Product } from '../../domain/entities/Product';
 import { Normalizer } from '../../domain/interfaces/services/Normalizer';
-import { RawProduct } from '../../domain/interfaces/stores/Store';
+import { RawProduct } from '../../domain/dtos/search/RawProduct';
 import { Money } from '../../domain/valueObjects/Money';
 
 export class BasicNormalizer implements Normalizer {

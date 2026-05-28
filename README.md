@@ -19,8 +19,7 @@ src/
 │   ├── dtos/                    ← Inputs/outputs de use cases
 │   ├── interfaces/              ← Puertos outbound
 │   │   ├── repositories/        ← Persistencia (datos propios)
-│   │   ├── stores/              ← Tiendas externas (datos ajenos read-only)
-│   │   ├── gateways/            ← Servicios externos con efectos
+│   │   ├── gateways/            ← Acceso a sistemas externos (auth, notif, stores)
 │   │   └── services/            ← Algoritmos infra-agnósticos
 │   ├── usecases/                ← Orquestación de la lógica de negocio
 │   └── exceptions/              ← Errores de dominio
