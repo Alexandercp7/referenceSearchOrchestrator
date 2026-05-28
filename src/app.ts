@@ -27,6 +27,7 @@ import { authMiddleware } from './infrastructure/http/AuthMiddleware';
 import { errorHandler } from './infrastructure/http/ErrorHandler';
 
 import { BasicNormalizer } from './infrastructure/repositories/BasicNormalizer';
+import { UuidGenerator } from './infrastructure/repositories/UuidGenerator';
 import { ConsoleNotificationGateway } from './infrastructure/repositories/ConsoleNotificationGateway';
 import { InMemoryAlertRepository } from './infrastructure/repositories/InMemoryAlertRepository';
 import { InMemoryPriceHistoryRepository } from './infrastructure/repositories/InMemoryPriceHistoryRepository';
@@ -86,6 +87,7 @@ export function buildApp(config: AppConfig): BuiltApp {
 
   const normalizer = new BasicNormalizer();
   const ranker = new WeightedRankStrategy();
+  const ids = new UuidGenerator();
 
   const alertEvaluators = new Map<AlertCondition['kind'], AlertConditionEvaluator>([
     ['PriceBelow', new PriceBelowEvaluator()],
@@ -94,7 +96,7 @@ export function buildApp(config: AppConfig): BuiltApp {
   ]);
 
   // ─── Use cases ────────────────────────────────────────────────────────
-  const registration = new UserRegistration(usersRepo, auth, auth);
+  const registration = new UserRegistration(usersRepo, auth, auth, ids);
   const login = new UserLogin(usersRepo, auth, auth);
   const tokenRefresh = new TokenRefresh(auth);
 
@@ -105,14 +107,15 @@ export function buildApp(config: AppConfig): BuiltApp {
     historyRepo,
     fetchableStores,
     normalizer,
+    ids,
   );
   const watchlistRemoval = new WatchlistRemoval(watchlistRepo);
   const watchlistView = new WatchlistView(watchlistRepo, historyRepo);
 
-  const priceRefresh = new PriceRefresh(watchlistRepo, historyRepo, fetchableStores, normalizer);
+  const priceRefresh = new PriceRefresh(watchlistRepo, historyRepo, fetchableStores, normalizer, ids);
   const priceHistoryQuery = new PriceHistoryQuery(historyRepo);
 
-  const alertCreation = new AlertCreation(alertsRepo);
+  const alertCreation = new AlertCreation(alertsRepo, ids);
   const alertRemoval = new AlertRemoval(alertsRepo);
   const alertListing = new AlertListing(alertsRepo);
   const alertEvaluation = new AlertEvaluation(

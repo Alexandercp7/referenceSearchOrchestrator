@@ -1,8 +1,8 @@
-import { randomUUID } from 'node:crypto';
 import { PriceSnapshot } from '../entities/PriceSnapshot';
 import { WatchlistItem } from '../entities/WatchlistItem';
 import { PriceHistoryRepository } from '../interfaces/repositories/PriceHistoryRepository';
 import { WatchlistRepository } from '../interfaces/repositories/WatchlistRepository';
+import { IdGenerator } from '../interfaces/gateways/IdGenerator';
 import { Normalizer } from '../interfaces/services/Normalizer';
 import { StoreProductLookup } from '../interfaces/stores/StoreProductLookup';
 
@@ -12,6 +12,7 @@ export class PriceRefresh {
     private readonly history: PriceHistoryRepository,
     private readonly stores: Map<string, StoreProductLookup>,
     private readonly normalizer: Normalizer,
+    private readonly ids: IdGenerator,
   ) {}
 
   async refresh(): Promise<void> {
@@ -28,7 +29,7 @@ export class PriceRefresh {
 
     const product = this.normalizer.normalize(raw);
     const snapshot = new PriceSnapshot(
-      randomUUID(),
+      this.ids.generate(),
       item.productUrl,
       item.store,
       product.price,

@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { AddItemRequest } from '../dtos/watchlist/AddItemRequest';
 import { PriceSnapshot } from '../entities/PriceSnapshot';
 import { WatchlistItem } from '../entities/WatchlistItem';
@@ -6,6 +5,7 @@ import { ProductNotFound } from '../exceptions/SearchErrors';
 import { ItemAlreadyTracked, UnknownStore } from '../exceptions/WatchlistErrors';
 import { PriceHistoryRepository } from '../interfaces/repositories/PriceHistoryRepository';
 import { WatchlistRepository } from '../interfaces/repositories/WatchlistRepository';
+import { IdGenerator } from '../interfaces/gateways/IdGenerator';
 import { Normalizer } from '../interfaces/services/Normalizer';
 import { StoreProductLookup } from '../interfaces/stores/StoreProductLookup';
 
@@ -15,6 +15,7 @@ export class WatchlistAddition {
     private readonly history: PriceHistoryRepository,
     private readonly stores: Map<string, StoreProductLookup>,
     private readonly normalizer: Normalizer,
+    private readonly ids: IdGenerator,
   ) {}
 
   async add(request: AddItemRequest): Promise<WatchlistItem> {
@@ -36,7 +37,7 @@ export class WatchlistAddition {
     const now = new Date();
 
     const item = new WatchlistItem(
-      randomUUID(),
+      this.ids.generate(),
       request.userId,
       request.productUrl,
       request.store,
@@ -46,7 +47,7 @@ export class WatchlistAddition {
     await this.watchlist.save(item);
 
     const snapshot = new PriceSnapshot(
-      randomUUID(),
+      this.ids.generate(),
       request.productUrl,
       request.store,
       product.price,

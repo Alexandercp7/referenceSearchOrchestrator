@@ -16,7 +16,7 @@ export class PriceHistoryController {
     try {
       const productUrl = String(req.query.productUrl ?? '');
       const days = Number(req.query.days ?? DEFAULT_LOOKBACK_DAYS);
-      const range = DateRange.lastDays(days);
+      const range = DateRange.lastDays(days, new Date());
       const points = await this.historyQuery.query({ productUrl, range });
       res.status(200).json(points);
     } catch (err) {

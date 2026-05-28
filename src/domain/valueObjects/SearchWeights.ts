@@ -33,6 +33,10 @@ export class SearchWeights {
     return new SearchWeights(0.7, 0.1, 0.1, 0.1);
   }
 
+  toCacheKey(): string {
+    return `${this.price}:${this.stock}:${this.delivery}:${this.msi}`;
+  }
+
   private assertRange(name: string, value: number): void {
     if (Number.isNaN(value) || value < 0 || value > 1) {
       throw new InvalidWeights(`${name} must be a number in [0, 1], got ${value}`);

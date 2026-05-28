@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { AuthResponse } from '../dtos/auth/AuthResponse';
 import { RegistrationRequest } from '../dtos/auth/RegistrationRequest';
 import { User } from '../entities/User';
@@ -6,6 +5,7 @@ import { UserAlreadyExists } from '../exceptions/UserErrors';
 import { PasswordGateway } from '../interfaces/gateways/PasswordGateway';
 import { TokenGateway } from '../interfaces/gateways/TokenGateway';
 import { UserRepository } from '../interfaces/repositories/UserRepository';
+import { IdGenerator } from '../interfaces/gateways/IdGenerator';
 import { Email } from '../valueObjects/Email';
 import { asPasswordHash } from '../valueObjects/PasswordHash';
 
@@ -14,6 +14,7 @@ export class UserRegistration {
     private readonly users: UserRepository,
     private readonly passwords: PasswordGateway,
     private readonly tokens: TokenGateway,
+    private readonly ids: IdGenerator,
   ) {}
 
   async register(request: RegistrationRequest): Promise<AuthResponse> {
@@ -24,7 +25,7 @@ export class UserRegistration {
     }
 
     const hash = await this.passwords.hashPassword(request.password);
-    const user = new User(randomUUID(), email, asPasswordHash(hash), new Date());
+    const user = new User(this.ids.generate(), email, asPasswordHash(hash), new Date());
     await this.users.save(user);
 
     const tokenPair = await this.tokens.createTokens({ userId: user.id, email: email.value });

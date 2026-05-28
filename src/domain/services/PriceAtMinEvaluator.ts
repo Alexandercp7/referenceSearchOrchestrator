@@ -13,7 +13,7 @@ export class PriceAtMinEvaluator implements AlertConditionEvaluator {
     history: PriceHistoryRepository,
   ): Promise<boolean> {
     if (condition.kind !== 'PriceAtMin') return false;
-    const range = DateRange.lastDays(condition.lookbackDays);
+    const range = DateRange.lastDays(condition.lookbackDays, snapshot.scrapedAt);
     const min = await history.getMin(snapshot.productUrl, range);
     return min !== null && snapshot.price.equals(min);
   }

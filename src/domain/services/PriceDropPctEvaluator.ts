@@ -13,7 +13,7 @@ export class PriceDropPctEvaluator implements AlertConditionEvaluator {
     history: PriceHistoryRepository,
   ): Promise<boolean> {
     if (condition.kind !== 'PriceDropPct') return false;
-    const range = DateRange.lastDays(condition.lookbackDays);
+    const range = DateRange.lastDays(condition.lookbackDays, snapshot.scrapedAt);
     const snapshots = await history.getHistory(snapshot.productUrl, range);
     if (snapshots.length < 2) return false;
     const previous = snapshots[snapshots.length - 2];
