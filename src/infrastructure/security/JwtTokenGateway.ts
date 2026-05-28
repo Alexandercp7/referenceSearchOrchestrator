@@ -1,36 +1,28 @@
-import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
-import {
-  AuthGateway,
-  TokenPair,
-  TokenPayload,
-} from '../../domain/interfaces/gateways/AuthGateway';
 import { InvalidToken } from '../../domain/exceptions/UserErrors';
+import { TokenGateway, TokenPair, TokenPayload } from '../../domain/interfaces/gateways/TokenGateway';
 
 export interface JwtConfig {
   secret: string;
-  accessTtl: string;
-  refreshTtl: string;
-  bcryptRounds: number;
+  accessTtl?: string;
+  refreshTtl?: string;
 }
 
-export class JwtBcryptAuthGateway implements AuthGateway {
-  constructor(private readonly config: JwtConfig) {}
+export class JwtTokenGateway implements TokenGateway {
+  private readonly accessTtl: string;
+  private readonly refreshTtl: string;
 
-  async hashPassword(plain: string): Promise<string> {
-    return bcrypt.hash(plain, this.config.bcryptRounds);
-  }
-
-  async verifyPassword(plain: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(plain, hash);
+  constructor(private readonly config: JwtConfig) {
+    this.accessTtl = config.accessTtl ?? '15m';
+    this.refreshTtl = config.refreshTtl ?? '7d';
   }
 
   async createTokens(payload: TokenPayload): Promise<TokenPair> {
     const accessToken = jwt.sign(payload, this.config.secret, {
-      expiresIn: this.config.accessTtl as SignOptions['expiresIn'],
+      expiresIn: this.accessTtl as SignOptions['expiresIn'],
     });
     const refreshToken = jwt.sign({ ...payload, type: 'refresh' }, this.config.secret, {
-      expiresIn: this.config.refreshTtl as SignOptions['expiresIn'],
+      expiresIn: this.refreshTtl as SignOptions['expiresIn'],
     });
     return { accessToken, refreshToken };
   }
@@ -48,9 +40,7 @@ export class JwtBcryptAuthGateway implements AuthGateway {
     try {
       const decoded = jwt.verify(refreshToken, this.config.secret) as jwt.JwtPayload &
         TokenPayload & { type?: string };
-      if (decoded.type !== 'refresh') {
-        throw new InvalidToken();
-      }
+      if (decoded.type !== 'refresh') throw new InvalidToken();
       return this.createTokens({ userId: decoded.userId, email: decoded.email });
     } catch {
       throw new InvalidToken();

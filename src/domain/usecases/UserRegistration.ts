@@ -6,6 +6,7 @@ import { PasswordGateway } from '../interfaces/gateways/PasswordGateway';
 import { TokenGateway } from '../interfaces/gateways/TokenGateway';
 import { UserRepository } from '../interfaces/repositories/UserRepository';
 import { IdGenerator } from '../interfaces/gateways/IdGenerator';
+import { DisplayName } from '../valueObjects/DisplayName';
 import { Email } from '../valueObjects/Email';
 import { asPasswordHash } from '../valueObjects/PasswordHash';
 
@@ -19,13 +20,14 @@ export class UserRegistration {
 
   async register(request: RegistrationRequest): Promise<AuthResponse> {
     const email = new Email(request.email);
+    const displayName = new DisplayName(request.name);
 
     if (await this.users.findByEmail(email)) {
       throw new UserAlreadyExists(email.value);
     }
 
     const hash = await this.passwords.hashPassword(request.password);
-    const user = new User(this.ids.generate(), email, asPasswordHash(hash), new Date());
+    const user = new User(this.ids.generate(), email, asPasswordHash(hash), new Date(), displayName);
     await this.users.save(user);
 
     const tokenPair = await this.tokens.createTokens({ userId: user.id, email: email.value });

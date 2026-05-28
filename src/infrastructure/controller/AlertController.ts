@@ -63,8 +63,12 @@ export class AlertController {
     }
     const c = input as Record<string, unknown>;
     switch (c.kind) {
-      case 'PriceBelow':
-        return priceBelow(new Money(String(c.amount), String(c.currency ?? 'MXN')));
+      case 'PriceBelow': {
+        const t = c.threshold as Record<string, unknown> | undefined;
+        const amount = String(t?.amount ?? c.amount);
+        const currency = String(t?.currency ?? c.currency ?? 'MXN');
+        return priceBelow(new Money(amount, currency));
+      }
       case 'PriceAtMin':
         return priceAtMin(Number(c.lookbackDays));
       case 'PriceDropPct':

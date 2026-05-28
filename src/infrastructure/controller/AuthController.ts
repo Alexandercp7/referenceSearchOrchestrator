@@ -22,6 +22,7 @@ export class AuthController {
       const response = await this.registration.register({
         email: req.body.email,
         password: req.body.password,
+        name: req.body.name,
       });
       res.status(201).json(response);
     } catch (err) {

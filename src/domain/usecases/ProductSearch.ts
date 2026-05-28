@@ -1,6 +1,6 @@
 import { SearchRequest } from '../dtos/search/SearchRequest';
 import { SearchResponse } from '../dtos/search/SearchResponse';
-import { AllStoresFailed } from '../exceptions/SearchErrors';
+import { AllStoresFailed, InvalidSearchQuery } from '../exceptions/SearchErrors';
 import { Normalizer } from '../interfaces/services/Normalizer';
 import { RankStrategy } from '../interfaces/services/RankStrategy';
 import { SearchCache } from '../interfaces/services/SearchCache';
@@ -16,6 +16,10 @@ export class ProductSearch {
   ) {}
 
   async search(request: SearchRequest): Promise<SearchResponse> {
+    if (!request.query || !request.query.trim()) {
+      throw new InvalidSearchQuery();
+    }
+
     const key = this.buildCacheKey(request);
 
     const cached = await this.cache.get(key);

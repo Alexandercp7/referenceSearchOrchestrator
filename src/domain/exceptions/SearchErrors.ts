@@ -1,5 +1,13 @@
 import { DomainError } from './DomainError';
 
+export class InvalidSearchQuery extends DomainError {
+  readonly code = 'INVALID_SEARCH_QUERY';
+
+  constructor() {
+    super('Search query must be a non-empty string');
+  }
+}
+
 export class InvalidProductUrl extends DomainError {
   readonly code = 'INVALID_PRODUCT_URL';
 

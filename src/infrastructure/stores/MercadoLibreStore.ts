@@ -45,7 +45,7 @@ async function getRenderedHtml(url: string, waitForSelector: string): Promise<st
   }
 }
 
-export class MercadoLibreScraperStore implements Store {
+export class MercadoLibreStore implements Store {
   readonly name = 'mercadolibre';
 
   async search(query: string): Promise<RawProduct[]> {
@@ -97,12 +97,14 @@ export class MercadoLibreScraperStore implements Store {
   }
 
   private extractCashPrice($: cheerio.CheerioAPI, card: Element): string {
-    const fraction = $(card)
-      .find('div.poly-price__current span.andes-money-amount__fraction')
-      .first()
-      .text()
-      .trim();
-    return fraction.replace(/,/g, '') || '0';
+    return (
+      $(card)
+        .find('div.poly-price__current span.andes-money-amount__fraction')
+        .first()
+        .text()
+        .trim()
+        .replace(/,/g, '') || '0'
+    );
   }
 
   private extractMsiText($: cheerio.CheerioAPI, card: Element): string {
@@ -115,14 +117,12 @@ export class MercadoLibreScraperStore implements Store {
       /sin interes(?:es)?.*\d+\s*(?:mes(?:es)?|x)/.test(normalized);
     if (!hasMsi) return '0';
 
-    const match = /(\d+)\s*(?:mes(?:es)?|x)/.exec(normalized);
-    return match?.[1] ?? '0';
+    return /(\d+)\s*(?:mes(?:es)?|x)/.exec(normalized)?.[1] ?? '0';
   }
 
   private extractDeliveryText($: cheerio.CheerioAPI, card: Element): string {
     const text = $(card).find('div.poly-component__shipping').first().text().trim();
-    if (!text) return '';
-    return parseDeliveryDays(normalizeText(text));
+    return text ? parseDeliveryDays(normalizeText(text)) : '';
   }
 
   private parseProductPage(html: string, url: string): RawProduct | null {
@@ -138,12 +138,14 @@ export class MercadoLibreScraperStore implements Store {
         .replace(/,/g, '')
         .trim() || '0';
 
-    const deliveryRaw = $('p.ui-pdp-color--BLACK.ui-pdp-family--SEMIBOLD').first().text();
-    const deliveryText = parseDeliveryDays(normalizeText(deliveryRaw));
+    const deliveryText = parseDeliveryDays(
+      normalizeText($('p.ui-pdp-color--BLACK.ui-pdp-family--SEMIBOLD').first().text()),
+    );
 
-    const msiRaw = $('p.ui-pdp-promotion-item__label').first().text();
-    const msiMatch = /(\d+)\s*(?:mes(?:es)?|x)/.exec(normalizeText(msiRaw));
-    const msiText = msiMatch?.[1] ?? '0';
+    const msiText =
+      /(\d+)\s*(?:mes(?:es)?|x)/.exec(
+        normalizeText($('p.ui-pdp-promotion-item__label').first().text()),
+      )?.[1] ?? '0';
 
     return {
       title,

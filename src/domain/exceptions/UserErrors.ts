@@ -4,6 +4,10 @@ export class InvalidEmail extends DomainError {
   readonly code = 'INVALID_EMAIL';
 }
 
+export class InvalidDisplayName extends DomainError {
+  readonly code = 'INVALID_DISPLAY_NAME';
+}
+
 export class InvalidPasswordHash extends DomainError {
   readonly code = 'INVALID_PASSWORD_HASH';
 }
